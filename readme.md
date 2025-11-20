@@ -312,10 +312,6 @@ Sistem ini terintegrasi dengan database Khanza untuk:
 -   Single Sign-On (SSO) menggunakan user ID yang sama dengan Khanza
 -   Pengambilan data master karyawan
 
-## 📝 License
-
-Project ini menggunakan [MIT License](https://opensource.org/licenses/MIT).
-
 ## 👥 Kontributor
 
 -   Development Team Ludira Husada Tama
