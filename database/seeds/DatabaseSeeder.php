@@ -21,5 +21,10 @@ class DatabaseSeeder extends Seeder
         $departemenSeeder = new DepartemenSeeder();
         $departemenSeeder->setCommand($this->command);
         $departemenSeeder->run();
+
+        require_once __DIR__ . '/AdminSeeder.php';
+        $adminSeeder = new AdminSeeder();
+        $adminSeeder->setCommand($this->command);
+        $adminSeeder->run();
     }
 }
