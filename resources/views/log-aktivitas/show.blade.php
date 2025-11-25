@@ -1,6 +1,28 @@
 @extends('layouts.main')
 
 @section('page-content')
+@php
+$currentUser = Auth::user();
+$karyawanRole = $karyawan_role ?? 'karyawan';
+
+$canPerformAction = function() use ($currentUser, $karyawanRole) {
+if (in_array($currentUser->role, ['admin', 'sdm', 'superadmin'])) {
+return true;
+}
+if ($currentUser->role === 'spv' && $karyawanRole === 'manager') {
+return false;
+}
+if ($currentUser->role === 'manager' && in_array($karyawanRole, ['karyawan', 'spv'])) {
+return true;
+}
+if ($currentUser->role === 'spv' && $karyawanRole === 'karyawan') {
+return true;
+}
+return false;
+};
+
+$hasActionPermission = $canPerformAction();
+@endphp
 <div class="p-6 pb-8">
     <!-- Header Section -->
     <div class="mb-6">
@@ -8,7 +30,7 @@
 
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Detail Log Aktivitas</h1>
-                <p class="text-sm text-gray-600 mt-1">Informasi lengkap log aktivitas harian</p>
+                <p class="text-sm text-gray-600 mt-1">Informasi lengkap log aktivitas harian Unit </p>
             </div>
             <a href="{{ route('log-aktivitas.index') }}" class="flex items-center text-white px-3 py-2  hover:no-underline border rounded-lg bg-gray-600 hover:bg-gray-900">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
@@ -72,7 +94,7 @@
         </div>
 
         <!-- Bulk Action Section -->
-        @if(in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']) && $status == 'menunggu')
+        @if($hasActionPermission && $status == 'menunggu')
         <div id="bulkActionBar" class="hidden bg-teal-50 border border-teal-200 rounded-lg p-4 mb-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -83,11 +105,11 @@
                 <div class="flex items-center gap-2">
                     <button type="button" id="bulkApproveBtn" class="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors font-medium">
                         <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>
-                        Setujui Massal
+                        Terima
                     </button>
                     <button type="button" id="bulkRejectBtn" class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
                         <i data-lucide="x-circle" class="w-4 h-4 inline mr-1"></i>
-                        Tolak Massal
+                        Tolak
                     </button>
                     <button type="button" id="cancelBulkAction" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors font-medium">
                         Batal
@@ -101,7 +123,7 @@
         <div>
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-medium text-gray-500">Daftar Aktivitas Per Jam</h3>
-                @if(in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']) && $status == 'menunggu')
+                @if($hasActionPermission && $status == 'menunggu')
                 <div class="flex items-center gap-2">
                     <input type="checkbox" id="selectAllLogs" class="rounded border-gray-300 text-teal-600 focus:ring-teal-500">
                     <label for="selectAllLogs" class="text-xs text-gray-600">Pilih Semua</label>
@@ -114,7 +136,7 @@
         <div class="border border-gray-200 rounded-lg p-2 bg-gray-50 m-4" data-log-id="{{ $log->id }}" data-waktu-awal="{{ \Carbon\Carbon::parse($log->waktu_awal)->format('H:i') }}" data-waktu-akhir="{{ \Carbon\Carbon::parse($log->waktu_akhir)->format('H:i') }}" data-aktivitas="{{ htmlspecialchars($log->aktivitas, ENT_QUOTES, 'UTF-8') }}">
             <div class="flex items-start justify-between mb-2">
                 <div class="flex items-center gap-3">
-                    @if(in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']) && $log->status == 'menunggu')
+                    @if($hasActionPermission && $log->status == 'menunggu')
                     <input type="checkbox" name="log_ids[]" value="{{ $log->id }}" class="log-checkbox rounded border-gray-300 text-teal-600 focus:ring-teal-500">
                     @endif
                     <div class="flex items-center gap-2">
@@ -139,7 +161,7 @@
                     </span>
                     @endif
 
-                    @if($log->status == 'menunggu' && (Auth::user()->role === 'karyawan' || in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin'])))
+                    @if($log->status == 'menunggu' && ((Auth::user()->role === 'karyawan' && $log->user_id == Auth::id()) || ($hasActionPermission && $log->user_id != Auth::id())))
                     <button type="button" onclick="openEditModal('{{ $log->id }}')" class="text-blue-600 hover:text-blue-900 transition-colors" title="Edit">
                         <i data-lucide="pencil" class="w-4 h-4"></i>
                     </button>
@@ -177,13 +199,13 @@
 
 <!-- Action Buttons -->
 <div class="flex items-center gap-3 mt-6 ml-6">
-    @if(in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']) && $status == 'menunggu')
+    @if($hasActionPermission && $status == 'menunggu')
     <form action="{{ route('log-aktivitas.bulk-approve') }}" method="POST" class="inline">
         @csrf
         <input type="hidden" name="selected_items[]" value="{{ $tanggal }}_{{ $karyawan->id }}">
         <button type="submit" class="flex items-center gap-2 px-4 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium" onclick="return confirm('Apakah Anda yakin ingin menyetujui semua log aktivitas ini?');">
             <i data-lucide="check-circle" class="w-4 h-4"></i>
-            Setujui Semua
+            Terima Semua
         </button>
     </form>
     <button type="button" onclick="openRejectAllModal()" class="flex items-center gap-2 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
@@ -199,7 +221,7 @@
 
 
 <!-- Reject All Modal -->
-@if(in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']) && $status == 'menunggu')
+@if($hasActionPermission && $status == 'menunggu')
 <div id="rejectAllModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div class="mt-3">
@@ -227,7 +249,7 @@
 @endif
 
 <!-- Bulk Reject Modal (untuk validasi massal) -->
-@if(in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']) && $status == 'menunggu')
+@if($hasActionPermission && $status == 'menunggu')
 <div id="bulkRejectModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div class="mt-3">
@@ -256,7 +278,7 @@
 @endif
 
 <!-- Edit Modal -->
-@if(Auth::user()->role === 'karyawan' || in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']))
+@if(Auth::user()->role === 'karyawan' || $hasActionPermission)
 <div id="editModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
         <div class="mt-3">

@@ -24,8 +24,10 @@ Auth::routes();
 Route::middleware('auth')->group(function () {
     Route::get('/home', 'HomeController@index')->name('home');
     Route::get('/karyawan', 'KaryawanController@index')->name('karyawan');
+    Route::put('/karyawan/{nik}/update', 'KaryawanController@updateKaryawan')->name('karyawan.update.sideout');
     Route::post('/karyawan/{nik}/activate', 'KaryawanController@activate')->name('karyawan.activate');
     Route::put('/karyawan/{id}/password', 'KaryawanController@updatePassword')->name('karyawan.update-password');
+    Route::put('/karyawan/{id}/role', 'KaryawanController@updateRole')->name('karyawan.update-role');
     Route::put('/karyawan/{id}', 'KaryawanController@update')->name('karyawan.update');
 
     Route::get('/password/change', 'ChangePasswordController@showChangeForm')->name('password.change.form');
@@ -37,6 +39,7 @@ Route::middleware('auth')->group(function () {
 
     // Log Aktivitas Routes
     Route::get('/log-aktivitas', 'LogAktivitasController@index')->name('log-aktivitas.index');
+    Route::get('/log-aktivitas/my-activity', 'LogAktivitasController@myActivity')->name('log-aktivitas.my-activity');
     Route::get('/log-aktivitas/create', 'LogAktivitasController@create')->name('log-aktivitas.create');
     Route::post('/log-aktivitas', 'LogAktivitasController@store')->name('log-aktivitas.store');
     Route::get('/log-aktivitas/show', 'LogAktivitasController@show')->name('log-aktivitas.show');

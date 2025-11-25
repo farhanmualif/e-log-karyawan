@@ -32,7 +32,7 @@
                     @endforeach
                 </select>
 
-                <a href="{{ route('unit.create') }}" class="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors text-sm font-medium whitespace-nowrap">
+                <a href="{{ route('unit.create') }}" class="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 hover:no-underline transition-colors text-sm font-medium whitespace-nowrap">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     Tambah Unit
                 </a>
@@ -92,51 +92,5 @@
 
     </div>
 </div>
-
-<script>
-    $(document).ready(function() {
-        lucide.createIcons();
-
-        function applyFilters() {
-            const filterValue = $('#filterDepartemen').val();
-            const searchValue = $('#searchInput').val().toLowerCase();
-
-            $('#unitTableBody tr').each(function() {
-                let showRow = true;
-
-                // Filter berdasarkan departemen (kolom index 2)
-                if (filterValue && filterValue !== '') {
-                    const departemen = $(this).find('td:eq(2)').text().trim();
-                    if (departemen !== filterValue) {
-                        showRow = false;
-                    }
-                }
-
-                // Filter berdasarkan search text
-                if (showRow && searchValue) {
-                    const rowText = $(this).text().toLowerCase();
-                    if (rowText.indexOf(searchValue) === -1) {
-                        showRow = false;
-                    }
-                }
-
-                // Tampilkan atau sembunyikan baris
-                if (showRow) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        }
-
-        $('#filterDepartemen').on('change', function() {
-            applyFilters();
-        });
-
-        $('#searchInput').on('keyup', function() {
-            applyFilters();
-        });
-    });
-</script>
-
+<script src="{{ asset('js/scripts/data-master/unit/unit.index.js') }}"></script>
 @endsection

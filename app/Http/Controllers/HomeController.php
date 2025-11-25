@@ -12,21 +12,17 @@ class HomeController extends Controller
     {
         $user = Auth::user();
 
-        // Helper function untuk filter log berdasarkan role (menggunakan unit_id dan departemen_id dari log_aktivitas)
+        // filter log berdasarkan role (menggunakan unit_id dan departemen_id dari log_aktivitas)
         $filterLogQuery = function ($query) use ($user) {
             if ($user->role === 'karyawan') {
-                // Karyawan: hanya melihat data sendiri (tidak punya akses ke data orang lain)
                 $query->where('log_aktivitas.user_id', $user->id);
             } elseif ($user->role === 'spv') {
-                // SPV: melihat data seluruh karyawan di unitnya
                 if ($user->unit_id) {
                     $query->where('log_aktivitas.unit_id', $user->unit_id);
                 } else {
-                    // Jika tidak punya unit, hanya lihat data sendiri
                     $query->where('log_aktivitas.user_id', $user->id);
                 }
             } elseif ($user->role === 'manager') {
-                // Manager: melihat data seluruh karyawan di departemennya
                 if ($user->departemen_id) {
                     $unitIds = DB::table('tb_unit')
                         ->where('departemen_id', $user->departemen_id)
@@ -34,14 +30,11 @@ class HomeController extends Controller
                         ->pluck('id');
                     $query->whereIn('log_aktivitas.unit_id', $unitIds);
                 } else {
-                    // Jika tidak punya departemen, hanya lihat data sendiri
                     $query->where('log_aktivitas.user_id', $user->id);
                 }
             }
-            // SDM/Superadmin/Admin: melihat data seluruh karyawan (tidak perlu filter)
         };
 
-        // 1. Status Log Aktivitas (Donut Chart) - Format data siap pakai
         $statusLogQuery = DB::table('log_aktivitas');
         $filterLogQuery($statusLogQuery);
         $statusLogRaw = $statusLogQuery->select('status', DB::raw('COUNT(*) as total'))
@@ -49,7 +42,6 @@ class HomeController extends Controller
             ->pluck('total', 'status')
             ->toArray();
 
-        // Format untuk chart
         $statusLabels = [];
         $statusData = [];
         foreach (['menunggu', 'tervalidasi', 'ditolak'] as $status) {
@@ -57,7 +49,7 @@ class HomeController extends Controller
             $statusData[] = isset($statusLogRaw[$status]) ? $statusLogRaw[$status] : 0;
         }
 
-        // 2. Trend Log Aktivitas 7 Hari Terakhir (Line Chart) - Format data siap pakai
+        // Trend Log Aktivitas 7 Hari Terakhir (Line Chart) - Format data siap pakai
         $sevenDaysAgo = Carbon::now()->subDays(6)->startOfDay();
         $trendLogQuery = DB::table('log_aktivitas')
             ->where('tanggal', '>=', $sevenDaysAgo);
@@ -70,7 +62,6 @@ class HomeController extends Controller
             ->orderBy('date', 'asc')
             ->get();
 
-        // Format untuk chart
         $trendDates = [];
         $trendCounts = [];
         $dateMap = [];
@@ -85,7 +76,7 @@ class HomeController extends Controller
             $trendCounts[] = isset($dateMap[$date]) ? $dateMap[$date] : 0;
         }
 
-        // 3. Log Aktivitas per Departemen (Bar Chart) - Format data siap pakai
+        //  Log Aktivitas per Departemen (Bar Chart) - Format data siap pakai
         $logPerDepartemenQuery = DB::table('log_aktivitas')
             ->join('tb_departemen', 'log_aktivitas.departemen_id', '=', 'tb_departemen.id')
             ->whereNull('tb_departemen.deleted_at')
@@ -97,11 +88,10 @@ class HomeController extends Controller
             ->limit(5)
             ->get();
 
-        // Format untuk chart
         $deptNames = $logPerDepartemenRaw->pluck('nama')->toArray();
         $deptCounts = $logPerDepartemenRaw->pluck('total')->toArray();
 
-        // 4. Top 5 Karyawan Paling Aktif (Bulan ini) - Format data siap pakai
+        // Top 5 Karyawan Paling Aktif (Bulan ini) - Format data siap pakai
         $topKaryawanQuery = DB::table('log_aktivitas')
             ->join('users', 'log_aktivitas.user_id', '=', 'users.id')
             ->whereMonth('log_aktivitas.tanggal', Carbon::now()->month)
@@ -120,7 +110,7 @@ class HomeController extends Controller
         $karyawanNames = $topKaryawanRaw->pluck('name')->toArray();
         $karyawanCounts = $topKaryawanRaw->pluck('total')->toArray();
 
-        // 5. Distribusi Aktivitas per Jam (Jam kerja 8-17) - Format data siap pakai
+        // Distribusi Aktivitas per Jam (Jam kerja 8-17) - Format data siap pakai
         $activityPerHourQuery = DB::table('log_aktivitas')
             ->where('tanggal', '>=', $sevenDaysAgo)
             ->whereBetween(DB::raw('HOUR(waktu_awal)'), [8, 17]);
@@ -133,7 +123,6 @@ class HomeController extends Controller
             ->orderBy('hour', 'asc')
             ->get();
 
-        // Format untuk chart
         $hourLabels = [];
         $hourCounts = [];
         $hourMap = [];

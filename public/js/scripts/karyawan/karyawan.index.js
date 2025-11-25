@@ -1,6 +1,4 @@
-function openEmployeeDetail(employeeId, name, email, role, department, joinedDate, initials, userId, departemenId, unitId, passwordChanged, departemenNama, unitNama, isRegistered) {
-    console.log('openEmployeeDetail called:', { employeeId, name, userId, departemenId, unitId, passwordChanged, departemenNama, unitNama, isRegistered });
-
+function openEmployeeDetail(employeeId, name, email, role, department, joinedDate, initials, userId, departemenId, unitId, passwordChanged, departemenNama, unitNama, isRegistered, userRole) {
     const $modal = $('#employeeDetailModal');
     const $panel = $('#slideoutPanel');
 
@@ -19,6 +17,12 @@ function openEmployeeDetail(employeeId, name, email, role, department, joinedDat
 
     $('#employeeNameInput').val(name);
     $('#userId').val(userId || '');
+
+    if (employeeId) {
+        const formAction = '/e-log-karyawan/karyawan/' + employeeId + '/update';
+        $('#employeeForm').attr('action', formAction);
+        $('#employeeIdForForm').val(employeeId);
+    }
 
     if (departemenId) {
         $('#employeeDepartemenSelect').val(departemenId);
@@ -169,11 +173,6 @@ function saveEmployeeDetail() {
     const originalText = $saveBtn.html();
     $saveBtn.prop('disabled', true).html('<span class="flex items-center"><i data-lucide="loader-2" class="mr-2 h-4 w-4 animate-spin text-white"></i>Menyimpan...</span>');
 
-    // Re-initialize Lucide icons for the loader
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-
     $.ajax({
         url: '/karyawan/' + userId,
         method: 'POST',
@@ -238,55 +237,51 @@ function saveEmployeeDetail() {
     });
 }
 
-// Toggle dropdown menu
 $(document).on('click', '.menu-toggle-btn', function (e) {
     e.stopPropagation();
     const $dropdown = $(this).next('.menu-dropdown');
     const $allDropdowns = $('.menu-dropdown');
 
-    // Close all other dropdowns
     $allDropdowns.not($dropdown).addClass('hidden');
 
-    // Toggle current dropdown
     $dropdown.toggleClass('hidden');
 });
 
-// Close dropdown when clicking outside
 $(document).on('click', function (e) {
     if (!$(e.target).closest('.menu-toggle-btn, .menu-dropdown').length) {
         $('.menu-dropdown').addClass('hidden');
     }
 });
 
-// Open change password modal
-$(document).on('click', '.change-password-btn', function (e) {
+// Open change role modal
+$(document).on('click', '.edit-role-btn', function (e) {
     e.preventDefault();
     e.stopPropagation();
 
     const userId = $(this).data('user-id');
     const userName = $(this).data('user-name');
+    const userRole = $(this).data('user-role') || '';
 
-    // Close dropdown
     $('.menu-dropdown').addClass('hidden');
 
-    // Set modal data
-    $('#changePasswordUserId').val(userId);
-    $('#changePasswordModalTitle').text('Ubah Password - ' + userName);
+    $('#changeRoleUserId').val(userId);
+    $('#changeRoleModalTitle').text('Ubah Role - ' + userName);
 
-    // Reset form
-    $('#changePasswordForm')[0].reset();
-    $('#changePasswordNew').attr('type', 'password');
-    $('#changePasswordConfirm').attr('type', 'password');
+    const formAction = '/e-log-karyawan/karyawan/' + userId + '/role';
+    $('#changeRoleForm').attr('action', formAction);
 
-    // Show modal
-    $('#changePasswordModal').removeClass('hidden');
+    $('#oldRole').val(userRole);
+    $('#newRole').val(userRole);
 
-    // Re-initialize Lucide icons
+    const $modal = $('#changeRoleModal');
+    if ($modal.length) {
+        $modal.removeClass('hidden');
+    }
+
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
 
-    // Prevent body scroll
     $('body').css({
         overflow: 'hidden',
         position: 'fixed',
@@ -294,121 +289,22 @@ $(document).on('click', '.change-password-btn', function (e) {
     });
 });
 
-// Close change password modal
-window.closeChangePasswordModal = function () {
-    $('#changePasswordModal').addClass('hidden');
+// Close change role modal
+window.closeChangeRoleModal = function () {
+    const $modal = $('#changeRoleModal');
+    if ($modal.length) {
+        $modal.addClass('hidden');
+    }
 
-    // Restore body scroll
     $('body').css({
         overflow: '',
         position: '',
         width: '',
     });
 
-    // Reset form
-    $('#changePasswordForm')[0].reset();
-    $('#changePasswordNew').attr('type', 'password');
-    $('#changePasswordConfirm').attr('type', 'password');
-};
-
-// Submit change password form
-window.submitChangePassword = function () {
-    const userId = $('#changePasswordUserId').val();
-    const password = $('#changePasswordNew').val();
-    const passwordConfirm = $('#changePasswordConfirm').val();
-
-    if (!userId) {
-        alert('User ID tidak ditemukan!');
-        return;
+    if ($('#changeRoleForm').length) {
+        $('#changeRoleForm')[0].reset();
     }
-
-    if (!password) {
-        alert('Password baru wajib diisi!');
-        $('#changePasswordNew').focus();
-        return;
-    }
-
-    if (password.length < 6) {
-        alert('Password minimal 6 karakter!');
-        $('#changePasswordNew').focus();
-        return;
-    }
-
-    if (!passwordConfirm) {
-        alert('Konfirmasi password wajib diisi!');
-        $('#changePasswordConfirm').focus();
-        return;
-    }
-
-    if (password !== passwordConfirm) {
-        alert('Password dan konfirmasi password tidak cocok!');
-        $('#changePasswordConfirm').focus();
-        return;
-    }
-
-    const $submitBtn = $('button[onclick="submitChangePassword()"]');
-    const originalText = $submitBtn.html();
-    $submitBtn.prop('disabled', true).html('<span class="flex items-center"><i data-lucide="loader-2" class="mr-2 h-4 w-4 animate-spin text-white"></i>Menyimpan...</span>');
-
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-
-    const baseUrl = window.location.origin;
-    const passwordUrl = baseUrl + '/karyawan/' + userId + '/password';
-
-    $.ajax({
-        url: '/e-log-karyawan/karyawan/' + userId + '/password',
-        method: 'POST',
-        dataType: 'json',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            Accept: 'application/json',
-        },
-        data: {
-            _token: $('meta[name="csrf-token"]').attr('content'),
-            _method: 'PUT',
-            password: password,
-            password_confirmation: passwordConfirm,
-        },
-        success: function (response) {
-            $submitBtn.prop('disabled', false).html(originalText);
-
-            closeChangePasswordModal();
-
-            if (response && response.message) {
-                alert(response.message);
-            } else {
-                alert('Password berhasil diubah!');
-            }
-
-            location.reload();
-        },
-        error: function (xhr, status, error) {
-            $submitBtn.prop('disabled', false).html(originalText);
-            console.log(error);
-
-            let errorMessage = 'Error mengubah password. Silakan coba lagi.';
-
-            if (xhr.responseJSON) {
-                if (xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                } else if (xhr.responseJSON.errors) {
-                    const errors = xhr.responseJSON.errors;
-                    errorMessage = Object.values(errors).flat().join('\n');
-                }
-            }
-
-            console.error('Change password error:', {
-                status: xhr.status,
-                statusText: xhr.statusText,
-                response: xhr.responseJSON || xhr.responseText,
-                error: error,
-            });
-
-            alert(errorMessage);
-        },
-    });
 };
 
 function applyFilters() {
@@ -418,7 +314,6 @@ function applyFilters() {
     $('#karyawanTableBody tr').each(function () {
         let showRow = true;
 
-        // Filter berdasarkan departemen (kolom index 4)
         if (filterValue && filterValue !== 'Semua Departemen') {
             const departemen = $(this).find('td:eq(4)').text().trim();
             if (departemen !== filterValue) {
@@ -426,7 +321,6 @@ function applyFilters() {
             }
         }
 
-        // Filter berdasarkan search text
         if (showRow && searchValue) {
             const rowText = $(this).text().toLowerCase();
             if (rowText.indexOf(searchValue) === -1) {
@@ -434,7 +328,6 @@ function applyFilters() {
             }
         }
 
-        // Tampilkan atau sembunyikan baris
         if (showRow) {
             $(this).show();
         } else {
@@ -486,8 +379,9 @@ $(document).ready(function () {
         const unitNama = $btn.data('unit-nama') || 'Belum Ditentukan';
         const passwordChanged = $btn.data('password-changed') === 'true' || $btn.data('password-changed') === true;
         const isRegistered = $btn.data('is-registered') === 'true' || $btn.data('is-registered') === true;
+        const userRole = $btn.data('user-role') || null;
 
-        openEmployeeDetail(employeeId, name, email, role, department, joinedDate, initials, userId, departemenId, unitId, passwordChanged, departemenNama, unitNama, isRegistered);
+        openEmployeeDetail(employeeId, name, email, role, department, joinedDate, initials, userId, departemenId, unitId, passwordChanged, departemenNama, unitNama, isRegistered, userRole);
     });
 
     applyFilters();

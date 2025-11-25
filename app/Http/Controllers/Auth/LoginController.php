@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
@@ -114,16 +115,46 @@ class LoginController extends Controller
 
                     $this->guard()->login($user, $request->has('remember'));
                     return true;
+                } else {
+                    $request->session()->flash('login_error', 'ID User atau Password yang Anda masukkan salah');
+                    return false;
                 }
+            } else {
+                $request->session()->flash('login_error', 'ID User tidak ditemukan. Pastikan ID User yang Anda masukkan sama dengan yang digunakan di sistem Khanza.');
+                return false;
             }
-
-            return false;
         }
 
-        return $this->guard()->attempt(
+        // User sudah ada, coba login dengan password
+        $loginAttempt = $this->guard()->attempt(
             $this->credentials($request),
             $request->filled('remember')
         );
+
+        if (!$loginAttempt) {
+            $request->session()->flash('login_error', 'User ID atau Password yang Anda masukkan salah. Silakan periksa kembali User ID dan password Anda.');
+        }
+
+        return $loginAttempt;
+    }
+
+    /**
+     * Get the failed login response instance.
+     * Override untuk memberikan pesan error yang lebih jelas
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function sendFailedLoginResponse(Request $request)
+    {
+        // Ambil custom error message dari session jika ada
+        $errorMessage = $request->session()->get('login_error', 'ID User atau password yang Anda masukkan salah. Silakan periksa kembali dan coba lagi.');
+
+        throw ValidationException::withMessages([
+            $this->username() => [$errorMessage],
+        ]);
     }
 
     /**

@@ -36,7 +36,8 @@
                 <!-- <div class="border-t border-gray-100 my-1"></div> -->
                 <button
                     type="button"
-                    class="change-password-btn w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
+                    id="change-password-btn-profile"
+                    class="change-password-btn-profile w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
                     data-user-id="{{ Auth::id() }}"
                     data-user-name="{{ Auth::user()->username }}">
                     <i data-lucide="key" class="w-4 h-4"></i>
@@ -45,13 +46,54 @@
                 <div class="border-t border-gray-100 my-1"></div>
                 <a href="{{ route('logout') }}"
                     onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
-                    class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-red-600">
+                    class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 hover:no-underline transition-colors text-red-600">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     <span class="text-sm font-medium">Sign out</span>
                 </a>
-
             </div>
 
-            <script src="{{ asset('js/scripts/components/topbar-dropdown-menu.js') }}">
+            <script src="{{ asset('js/scripts/components/topbar-dropdown-menu.js') }}"></script>
+            <script>
+                const $changePasswordBtn = $('#change-password-btn-profile');
+                $changePasswordBtn.on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
 
+                    const userId = $(this).data('user-id');
+                    const userName = $(this).data('user-name') || 'User';
+
+                    console.log('=== TOPBAR CHANGE PASSWORD CLICKED ===');
+                    console.log('User ID:', userId);
+                    console.log('User Name:', userName);
+
+                    $('#userDropdown').addClass('hidden');
+                    $('.menu-dropdown').addClass('hidden');
+
+                    // Update form action berdasarkan user_id yang dipilih
+                    const newAction = '/e-log-karyawan/karyawan/' + userId + '/password';
+                    $('#changePasswordForm').attr('action', newAction);
+
+                    // Verifikasi form action sudah terupdate
+                    const verifyAction = $('#changePasswordForm').attr('action');
+                    if (verifyAction !== newAction) {
+                        console.error('ERROR: Form action tidak terupdate dari topbar!');
+                        alert('Terjadi kesalahan saat membuka modal. Silakan refresh halaman.');
+                        return;
+                    }
+                    console.log('✓ Form action berhasil diupdate dari topbar');
+
+                    $('#changePasswordModalTitle').text('Ubah Password - ' + userName);
+
+                    $('#changePasswordForm')[0].reset();
+                    $('#changePasswordNew').attr('type', 'password');
+                    $('#changePasswordConfirm').attr('type', 'password');
+
+                    $('#changePasswordModal').removeClass('hidden');
+
+                    $('body').css({
+                        overflow: 'hidden',
+                        position: 'fixed',
+                        width: '100%',
+                    });
+                });
             </script>

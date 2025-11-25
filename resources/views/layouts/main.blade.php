@@ -46,6 +46,12 @@
             @include('components.alerts.error-alert',['message'=>session('error')])
             @endif
             @endif
+
+            @if(session('validation_errors'))
+            @include('components.alerts.validation-alert', [
+            'errors' => session('validation_errors')
+            ])
+            @endif
         </div>
 
         <!-- Page Content -->
@@ -56,4 +62,9 @@
         </main>
     </div>
 </div>
+
+
+@include('components.change-password-modal')
+
+
 @endsection

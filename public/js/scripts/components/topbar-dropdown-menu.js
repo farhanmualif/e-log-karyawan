@@ -1,14 +1,37 @@
 function toggleUserMenu(event) {
     event.stopPropagation();
-    const dropdown = document.getElementById('userDropdown');
-    dropdown.classList.toggle('hidden');
+    const $dropdown = $('#userDropdown');
+    $dropdown.toggleClass('hidden');
 }
 
-document.addEventListener('click', function (event) {
-    const dropdown = document.getElementById('userDropdown');
-    const container = document.getElementById('userMenuContainer');
+$(document).on('click', function (event) {
+    $('#userDropdown').addClass('hidden');
+});
 
-    if (container && !container.contains(event.target)) {
-        dropdown.classList.add('hidden');
-    }
+$(document).ready(function () {
+    $(document).on('click', '.change-password-btn', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const userId = $(this).data('user-id');
+        const userName = $(this).data('user-name') || 'User';
+
+        $('#userDropdown').addClass('hidden');
+        $('.menu-dropdown').addClass('hidden');
+
+        $('#changePasswordUserId').val(userId);
+        $('#changePasswordModalTitle').text('Ubah Password - ' + userName);
+
+        $('#changePasswordForm')[0].reset();
+        $('#changePasswordNew').attr('type', 'password');
+        $('#changePasswordConfirm').attr('type', 'password');
+
+        $('#changePasswordModal').removeClass('hidden');
+
+        $('body').css({
+            overflow: 'hidden',
+            position: 'fixed',
+            width: '100%',
+        });
+    });
 });

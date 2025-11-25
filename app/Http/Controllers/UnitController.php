@@ -41,7 +41,6 @@ class UnitController extends Controller
             ->orderBy('tb_unit.nama', 'asc')
             ->get();
 
-        // Ambil daftar departemen untuk filter
         $departemen = DB::table('tb_departemen')
             ->whereNull('deleted_at')
             ->orderBy('nama', 'asc')
@@ -59,6 +58,11 @@ class UnitController extends Controller
             ->whereNull('deleted_at')
             ->orderBy('nama', 'asc')
             ->get();
+
+        $departemen->map(function ($item) {
+            $item->nama = ucwords(strtolower($item->nama));
+            return $item;
+        });
 
         return view('data-master.unit.create', compact('departemen'));
     }

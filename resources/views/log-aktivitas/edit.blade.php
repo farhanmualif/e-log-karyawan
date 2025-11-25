@@ -137,7 +137,7 @@
     </div>
 </div>
 
-<script>
+<!-- <script>
     $(document).ready(function() {
         $('#waktu_awal, #waktu_akhir').attr('lang', 'id');
         $('#waktu_awal').on('change', function() {
@@ -150,7 +150,7 @@
             }
         });
 
-        // Validasi waktu akhir hanya saat submit form, tidak di onChange
     });
-</script>
+</script> -->
+<script src="{{ asset('js/scripts/log-aktivitas/log-aktivitas.edit.js') }}"></script>
 @endsection

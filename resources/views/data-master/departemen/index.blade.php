@@ -24,7 +24,7 @@
                         class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white">
                 </div>
 
-                <a href="{{ route('departemen.create') }}" class="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors text-sm font-medium whitespace-nowrap">
+                <a href="{{ route('departemen.create') }}" class="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 hover:no-underline transition-colors text-sm font-medium whitespace-nowrap">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     Tambah Departemen
                 </a>
@@ -81,37 +81,6 @@
     </div>
 </div>
 
-<script>
-    $(document).ready(function() {
-        lucide.createIcons();
-
-        function applyFilters() {
-            const searchValue = $('#searchInput').val().toLowerCase();
-
-            $('#departemenTableBody tr').each(function() {
-                let showRow = true;
-
-                // Filter berdasarkan search text
-                if (searchValue) {
-                    const rowText = $(this).text().toLowerCase();
-                    if (rowText.indexOf(searchValue) === -1) {
-                        showRow = false;
-                    }
-                }
-
-                // Tampilkan atau sembunyikan baris
-                if (showRow) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        }
-
-        $('#searchInput').on('keyup', function() {
-            applyFilters();
-        });
-    });
-</script>
+<script src="{{ asset('js/scripts/data-master/departemen/departemen.index.js') }}"></script>
 
 @endsection

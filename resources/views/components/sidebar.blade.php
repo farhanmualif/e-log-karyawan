@@ -29,14 +29,23 @@
              <span class="text-sm font-medium">Karyawan</span>
          </a>
 
+         <!-- Log Aktivitas  Saya -->
+         <a href="{{ route('log-aktivitas.my-activity') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:no-underline  {{ request()->routeIs('log-aktivitas.my-activity*') ? 'bg-teal-50 text-gray-800' : 'text-gray-300 hover:bg-teal-50 hover:text-gray-800' }} transition-colors">
+             <i data-lucide="file-text" class="w-5 h-5"></i>
+             <span class="text-sm font-medium">Aktivitas Saya</span>
+         </a>
+
          <!-- Log Aktivitas -->
-         <a href="{{ route('log-aktivitas.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:no-underline  {{ request()->routeIs('log-aktivitas.*') ? 'bg-teal-50 text-gray-800' : 'text-gray-300 hover:bg-teal-50 hover:text-gray-800' }} transition-colors">
+         @if (in_array(Auth::user()->role, ['sdm','admin','manager','spv','superadmin']))
+         <a href="{{ route('log-aktivitas.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg hover:no-underline  {{ request()->routeIs('log-aktivitas.index*') ? 'bg-teal-50 text-gray-800' : 'text-gray-300 hover:bg-teal-50 hover:text-gray-800' }} transition-colors">
              <i data-lucide="file-text" class="w-5 h-5"></i>
              <span class="text-sm font-medium">Log Aktivitas</span>
          </a>
+         @endif
 
          <!-- Data Master (Hanya untuk admin dan sdm) -->
          @if(in_array(Auth::user()->role, ['superadmin','admin', 'sdm']))
+
          <div>
              <button onclick="toggleDataMaster()" class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:no-underline {{ (request()->routeIs('departemen.*') || request()->routeIs('unit.*')) ? 'bg-teal-50 text-gray-800' : 'text-gray-300 hover:bg-teal-50 hover:text-gray-800' }} transition-colors">
                  <div class="flex items-center gap-3">

@@ -7,8 +7,8 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <!-- Title -->
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Data Karyawan</h1>
-                <p class="text-sm text-gray-600 mt-1">Kelola data karyawan perusahaan Anda</p>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Data Karyawan</h1>
+                <p class="text-xs sm:text-sm text-gray-600 mt-1">Kelola data karyawan perusahaan Anda</p>
             </div>
 
             <!-- Search, Filters & Export -->
@@ -21,11 +21,11 @@
                     <input type="text"
                         id="searchInput"
                         placeholder="Search Karyawan"
-                        class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white">
+                        class="block w-full pl-10 pr-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white">
                 </div>
 
                 <!-- Status Filter -->
-                <select id="filterDepartemen" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white cursor-pointer">
+                <select id="filterDepartemen" class="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white cursor-pointer">
                     <option>Semua Departemen</option>
                     @foreach ($listDepartemen as $departemen )
                     <option value="{{ $departemen->nama }}">{{ $departemen->nama }}</option>
@@ -60,9 +60,12 @@
                 <!-- Table Header -->
                 <thead class="border-b border-gray-200">
                     <tr>
+                        @if (in_array(Auth::user()->role, ['admin','spv','sdm','superadmin']))
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             ID
                         </th>
+                        @endif
+
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:text-gray-900 transition-colors">
                             <div class="flex items-center gap-2">
                                 Nama karyawan
@@ -94,37 +97,40 @@
                 <tbody id="karyawanTableBody" class="bg-white divide-y divide-gray-100">
 
                     @foreach ( $listKaryawan as $karyawan )
+
                     <tr class="hover:bg-gray-50 transition-colors">
+                        @if (in_array(Auth::user()->role, ['admin','spv','sdm','superadmin']))
                         <td class="px-4 py-2 whitespace-nowrap">
-                            <span class="text-sm text-gray-600">{{ $karyawan->id }}</span>
+                            <span class="text-xs text-gray-600">{{ $karyawan->id }}</span>
                         </td>
+                        @endif
                         <td class="px-4 py-2 whitespace-nowrap">
-                            <div class="flex items-center gap-3">
-                                <div class="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold text-xs">
+                            <div class="flex items-center gap-2 sm:gap-3">
+                                <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold text-xs">
                                     AT
                                 </div>
                                 <div>
-                                    <div class="text-sm font-medium text-gray-900">{{ $karyawan->nama }}</div>
+                                    <div class="text-xs sm:text-sm font-medium text-gray-900">{{ $karyawan->nama }}</div>
                                 </div>
                             </div>
                         </td>
 
                         <td class="px-4 py-2 whitespace-nowrap">
-                            <span class="text-xs text-gray-900">{{ $karyawan->unit ?? 'Belum Di tentukan'}}</span>
+                            <span class="text-xs text-gray-900">{{ $karyawan->unit_nama ?? 'Belum Di tentukan'}}</span>
                         </td>
                         <td class="px-4 py-2 whitespace-nowrap">
                             @if(isset($karyawan->is_registered) && $karyawan->is_registered)
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span class="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 Terdaftar
                             </span>
                             @else
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <span class="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                 Belum Terdaftar
                             </span>
                             @endif
                         </td>
                         <td class="px-4 py-2 whitespace-nowrap">
-                            <span class="text-sm text-gray-600">{{ $karyawan->departemen_id ?? 'Belum ditentukan'}}</span>
+                            <span class="text-xs text-gray-600">{{ $karyawan->departemen_nama ?? 'Belum ditentukan'}}</span>
                         </td>
                         @if(Auth::user()->role != 'karyawan')
                         <td class="px-4 py-2 whitespace-nowrap text-right">
@@ -145,9 +151,10 @@
                                     data-departemen-nama="{{ isset($karyawan->departemen_nama) ? $karyawan->departemen_nama : 'Belum Ditentukan' }}"
                                     data-unit-id="{{ isset($karyawan->unit_id) ? $karyawan->unit_id : '' }}"
                                     data-unit-nama="{{ isset($karyawan->unit_nama) ? $karyawan->unit_nama : 'Belum Ditentukan' }}"
+                                    data-user-role="{{ isset($karyawan->user_role) ? $karyawan->user_role : '' }}"
                                     data-password-changed="{{ (isset($karyawan->password_changed) && $karyawan->password_changed) ? 'true' : 'false' }}"
                                     data-is-registered="{{ (isset($karyawan->is_registered) && $karyawan->is_registered) ? 'true' : 'false' }}">
-                                    <i data-lucide="eye" class="w-5 h-5"></i>
+                                    <i data-lucide="eye" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                                 </button>
 
                                 @if(isset($karyawan->is_registered) && $karyawan->is_registered && isset($karyawan->user_id))
@@ -159,32 +166,41 @@
                                         title="Menu"
                                         data-user-id="{{ $karyawan->user_id }}"
                                         data-user-name="{{ $karyawan->nama }}">
-                                        <i data-lucide="more-vertical" class="w-5 h-5"></i>
+                                        <i data-lucide="more-vertical" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                                     </button>
                                     <!-- Dropdown Content -->
-                                    <div class="menu-dropdown hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                    <div class="menu-dropdown hidden absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                                         <div class="py-1">
                                             <button
                                                 type="button"
-                                                class="change-password-btn w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
+                                                class="change-password-btn w-full text-left px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
                                                 data-user-id="{{ $karyawan->user_id }}"
                                                 data-user-name="{{ $karyawan->nama }}">
                                                 <i data-lucide="key" class="w-4 h-4"></i>
                                                 <span>Ubah Password</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="edit-role-btn w-full text-left px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
+                                                data-user-id="{{ $karyawan->user_id }}"
+                                                data-user-name="{{ $karyawan->nama }}"
+                                                data-user-role="{{ isset($karyawan->user_role) ? $karyawan->user_role : '' }}">
+                                                <i data-lucide="shield" class="w-4 h-4"></i>
+                                                <span>Edit Role</span>
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                                 @endif
 
-                                @if(in_array(Auth::user()->role, ['superadmin', 'admin', 'sdm']) && (!isset($karyawan->is_registered) || !$karyawan->is_registered))
+                                <!-- @if(in_array(Auth::user()->role, ['superadmin', 'admin', 'sdm']) && (!isset($karyawan->is_registered) || !$karyawan->is_registered))
                                 <form action="{{ route('karyawan.activate', $karyawan->id) }}" method="POST" class="inline ml-2" onsubmit="return confirm('Apakah Anda yakin ingin menambahakn karyawan ke sistem ini {{ $karyawan->nama }}? Password default: 12345');">
                                     @csrf
                                     <button type="submit" class="text-teal-600 hover:text-teal-900 transition-colors" title="Aktifkan Karyawan">
                                         <i data-lucide="user-plus" class="w-5 h-5"></i>
                                     </button>
                                 </form>
-                                @endif
+                                @endif -->
                             </div>
                         </td>
                         @endif
@@ -197,24 +213,8 @@
         </div>
 
         <!-- Pagination -->
-        <div class="bg-white px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="text-sm text-gray-600">
-                Showing <span class="font-medium text-gray-900">1-20</span> of <span class="font-medium text-gray-900">260</span> entries
-            </div>
-            <div class="flex items-center gap-2">
-                <button class="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
-                    < Previous
-                        </button>
-                        <button class="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 transition-colors">1</button>
-                        <button class="px-3 py-1.5 bg-teal-600 text-white rounded text-sm font-medium hover:bg-teal-700 transition-colors">2</button>
-                        <button class="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 transition-colors">3</button>
-                        <span class="px-2 text-gray-500">...</span>
-                        <button class="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 transition-colors">16</button>
-                        <button class="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 transition-colors">17</button>
-                        <button class="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                            Next >
-                        </button>
-            </div>
+        <div class="flex justify-end m-3">
+            {{ $listKaryawan->links() }}
         </div>
     </div>
 </div>
@@ -262,14 +262,14 @@
             <div class="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6 -mt-6 md:-mt-8">
                 <!-- Employee Summary Card -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 mb-4 md:mb-6 relative z-10">
-                    <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-1 break-words" id="employeeName"></h2>
+                    <h2 class="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-1 break-words" id="employeeName"></h2>
                     <div class="flex items-center gap-2 mb-3 md:mb-4">
-                        <span class="inline-flex items-center gap-1.5 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-xs font-sm" id="employeeStatus">
+                        <span class="inline-flex items-center gap-1.5 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-xs" id="employeeStatus">
                             <span class="w-1.5 h-1.5 rounded-full" id="statusDot"></span>
                             <span id="statusText"></span>
                         </span>
                     </div>
-                    <p class="text-xs md:text-sm text-gray-600 mb-4 md:mb-6 break-words" id="employeeEmail"></p>
+                    <p class="text-xs sm:text-sm text-gray-600 mb-4 md:mb-6 break-words" id="employeeEmail"></p>
 
                     <!-- Key Metrics -->
                     <div class="grid grid-cols-3 gap-2 md:gap-4 pt-3 md:pt-4 border-t border-gray-200">
@@ -289,25 +289,28 @@
                 </div>
 
                 <!-- Edit Form -->
-                <form id="employeeForm" class="space-y-4 md:space-y-6">
+                <form id="employeeForm" action="" method="POST" class="space-y-4 md:space-y-6">
+                    @csrf
+                    @method('PUT')
                     <input type="hidden" id="userId" name="user_id" value="">
+                    <input type="hidden" id="employeeIdForForm" name="employee_id" value="">
                     <!-- Name Field -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Nama</label>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Nama</label>
                         <input type="text"
                             id="employeeNameInput"
                             name="name"
-                            class="w-full px-3 md:px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                            class="w-full px-3 md:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                             placeholder="Nama lengkap"
                             required>
                     </div>
 
                     <!-- Departemen Field -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Departemen</label>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Departemen</label>
                         <select id="employeeDepartemenSelect"
                             name="departemen_id"
-                            class="w-full px-3 md:px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white cursor-pointer">
+                            class="w-full px-3 md:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white cursor-pointer">
                             <option value="">Pilih Departemen</option>
                             @foreach($listDepartemen as $dept)
                             <option value="{{ $dept->id }}">{{ $dept->nama }}</option>
@@ -317,37 +320,21 @@
 
                     <!-- Unit Field -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Unit</label>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Unit</label>
                         <select id="employeeUnitSelect"
                             name="unit_id"
-                            class="w-full px-3 md:px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white cursor-pointer">
+                            class="w-full px-3 md:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white cursor-pointer">
                             <option value="">Pilih Unit</option>
                             @foreach($listUnit as $unit)
                             <option value="{{ $unit->id }}" data-departemen="{{ $unit->departemen_id }}">{{ $unit->nama }}</option>
                             @endforeach
                         </select>
                     </div>
-
                     <!-- Password Field -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Password Baru</label>
-                        <div class="relative">
-                            <input type="password"
-                                id="employeePassword"
-                                name="password"
-                                class="w-full px-3 md:px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-                                placeholder="Kosongkan jika tidak ingin mengubah">
-                            <button type="button"
-                                onclick="togglePasswordVisibility('employeePassword', 'passwordToggleIcon1')"
-                                class="absolute inset-y-0 right-0 pr-2 md:pr-3 flex items-center text-gray-400 hover:text-gray-600 touch-manipulation">
-                                <i data-lucide="eye" id="passwordToggleIcon1" class="w-4 h-4 md:w-5 md:h-5"></i>
-                            </button>
-                        </div>
-                        <p class="mt-1 text-xs text-gray-500">Minimal 6 karakter</p>
-                    </div>
+
 
                     <!-- Password Confirmation -->
-                    <div>
+                    <!-- <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Konfirmasi Password</label>
                         <div class="relative">
                             <input type="password"
@@ -361,7 +348,7 @@
                                 <i data-lucide="eye" id="passwordToggleIcon2" class="w-4 h-4 md:w-5 md:h-5"></i>
                             </button>
                         </div>
-                    </div>
+                    </div> -->
 
                     <!-- Password Changed Status -->
                     <div>
@@ -375,86 +362,79 @@
                         </label>
                         <p class="text-xs text-gray-500 mt-1" id="passwordChangedHint">Status password dari database</p>
                     </div>
+
+                    <!-- Footer -->
+                    <div class="border-t border-gray-200 px-4 md:px-6 py-3 md:py-4 bg-gray-50 flex flex-col sm:flex-row justify-end gap-2 md:gap-3">
+                        <button onclick="closeEmployeeDetail()" class="w-full sm:w-auto px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm font-medium touch-manipulation">
+                            Cancel
+                        </button>
+                        <button type="submit" class="w-full sm:w-auto px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-xs sm:text-sm font-medium touch-manipulation">
+                            Save changes
+                        </button>
+                    </div>
                 </form>
             </div>
 
-            <!-- Footer -->
-            <div class="border-t border-gray-200 px-4 md:px-6 py-3 md:py-4 bg-gray-50 flex flex-col sm:flex-row justify-end gap-2 md:gap-3">
-                <button onclick="closeEmployeeDetail()" class="w-full sm:w-auto px-4 md:px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium touch-manipulation">
-                    Cancel
-                </button>
-                <button onclick="saveEmployeeDetail()" class="w-full sm:w-auto px-4 md:px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium touch-manipulation">
-                    Save changes
-                </button>
-            </div>
+
         </div>
     </div>
 </div>
 
-<!-- Change Password Modal -->
-<div id="changePasswordModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+<!-- Change Role Modal -->
+<div id="changeRoleModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeChangePasswordModal()"></div>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeChangeRoleModal()"></div>
 
         <!-- Modal Panel -->
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-teal-500 to-teal-600 px-6 py-4">
+            <div class="bg-gradient-to-r from-teal-500 to-teal-600 px-4 sm:px-6 py-3 sm:py-4">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-white" id="changePasswordModalTitle">Ubah Password</h3>
-                    <button type="button" onclick="closeChangePasswordModal()" class="text-white hover:text-teal-100 transition-colors">
-                        <i data-lucide="x" class="w-5 h-5"></i>
+                    <h3 class="text-base sm:text-lg font-semibold text-white" id="changeRoleModalTitle">Ubah Role</h3>
+                    <button type="button" onclick="closeChangeRoleModal()" class="text-white hover:text-teal-100 transition-colors">
+                        <i data-lucide="x" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Body -->
-            <form id="changePasswordForm" class="px-6 py-4">
-                <input type="hidden" id="changePasswordUserId" name="user_id" value="">
+            <form id="changeRoleForm" action="" method="POST" class="px-4 sm:px-6 py-4">
+                @csrf
+                @method('PUT')
+                <input type="hidden" id="changeRoleUserId" name="user_id" value="">
 
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Password Baru</label>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Role Lama</label>
                     <div class="relative">
-                        <input type="password"
-                            id="changePasswordNew"
-                            name="password"
-                            class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            placeholder="Masukkan password baru"
-                            required>
-                        <button type="button"
-                            onclick="togglePasswordVisibility('changePasswordNew', 'changePasswordToggleIcon1')"
-                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
-                            <i data-lucide="eye" id="changePasswordToggleIcon1" class="w-5 h-5"></i>
-                        </button>
+                        <input type="text"
+                            id="oldRole"
+                            class="w-full px-3 sm:px-4 py-2 pr-10 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-gray-100"
+                            disabled>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500">Minimal 6 karakter</p>
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Konfirmasi Password</label>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Role Baru</label>
                     <div class="relative">
-                        <input type="password"
-                            id="changePasswordConfirm"
-                            name="password_confirmation"
-                            class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            placeholder="Konfirmasi password baru"
-                            required>
-                        <button type="button"
-                            onclick="togglePasswordVisibility('changePasswordConfirm', 'changePasswordToggleIcon2')"
-                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
-                            <i data-lucide="eye" id="changePasswordToggleIcon2" class="w-5 h-5"></i>
-                        </button>
+                        <select id="newRole" name="role" class="w-full px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white cursor-pointer" required>
+                            <option value="">Pilih Role</option>
+                            <option value="admin">Admin</option>
+                            <option value="sdm">SDM</option>
+                            <option value="manager">Manager</option>
+                            <option value="spv">Supervisor</option>
+                            <option value="karyawan">Karyawan</option>
+                        </select>
                     </div>
                 </div>
             </form>
 
             <!-- Footer -->
-            <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-                <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+            <div class="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                <button type="button" onclick="closeChangeRoleModal()" class="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm font-medium">
                     Batal
                 </button>
-                <button type="button" onclick="submitChangePassword()" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium">
+                <button type="submit" form="changeRoleForm" class="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-xs sm:text-sm font-medium">
                     Simpan
                 </button>
             </div>

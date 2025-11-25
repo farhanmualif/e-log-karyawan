@@ -20,18 +20,30 @@ class KaryawanController extends Controller
             ->select(['nik as id', 'pegawai.nama', 'jk', 'bidang', 'departemen.nama as departemen', 'stts_kerja', 'mulai_kerja'])
             ->paginate($perPage);
 
-        // Ambil semua NIK yang sudah terdaftar di users
         $registeredNiks = DB::table('users')
             ->whereNotNull('username')
             ->pluck('username')
             ->toArray();
 
-        // Ambil semua user yang terdaftar beserta departemen dan unit mereka
         $registeredUsers = DB::table('users')
             ->whereNotNull('username')
-            ->select('username', 'id', 'departemen_id', 'unit_id', 'password_changed')
+            ->select('username', 'id', 'departemen_id', 'unit_id', 'password_changed', 'role')
             ->get()
             ->keyBy('username');
+
+        $listDepartemen = DB::table('tb_departemen')
+            ->whereNull('deleted_at')
+            ->orderBy('nama')
+            ->get();
+
+        $listDepartemenKeyId = $listDepartemen->keyBy('id');
+
+        $listUnit = DB::table('tb_unit')
+            ->orderBy('nama')
+            ->get()
+            ->keyBy('id');
+
+        $listUnitKeyId = $listUnit->keyBy('id');
 
         // Process each item in the paginated results
         $items = $listKaryawan->items();
@@ -44,12 +56,26 @@ class KaryawanController extends Controller
                 return !in_array(strtolower($p), $titles);
             });
 
-            $parts = array_values($parts);
+            $parts = array_filter($parts, function ($p) {
+                return trim($p) !== ''; // Hilangkan string kosong
+            });
 
-            if (count($parts) >= 2) {
-                $initial = strtoupper($parts[0][0] . $parts[1][0]);
-            } else {
-                $initial = strtoupper($parts[0][0]);
+            $parts = array_values($parts); // Reset index
+
+            // Jika kosong semua
+            if (count($parts) === 0) {
+                $initial = 'NA';
+            }
+            // Jika 1 kata
+            elseif (count($parts) === 1) {
+                $initial = strtoupper(mb_substr($parts[0], 0, 1));
+            }
+            // Jika lebih dari 1 kata
+            else {
+                $initial = strtoupper(
+                    mb_substr($parts[0], 0, 1) .
+                        mb_substr($parts[1], 0, 1)
+                );
             }
 
             $processedItem = [];
@@ -61,34 +87,27 @@ class KaryawanController extends Controller
 
             $processedItem['inisial_nama'] = $initial;
 
-            // Cek apakah sudah terdaftar dan ambil data user
             $isRegistered = in_array($item->id, $registeredNiks);
             $processedItem['is_registered'] = $isRegistered;
+            $processedItem['username'] = $item->id;
 
             if ($isRegistered && isset($registeredUsers[$item->id])) {
                 $user = $registeredUsers[$item->id];
                 $processedItem['user_id'] = $user->id;
-                $processedItem['departemen_id'] = $user->departemen_id;
-                $processedItem['unit_id'] = $user->unit_id;
+                $processedItem['departemen_id'] = $listDepartemenKeyId[$user->departemen_id]->id ?? "Belum Ditentukan";
+                $processedItem['unit_id'] = $listUnitKeyId[$user->unit_id]->id ?? "Belum Ditentukan";
                 $processedItem['password_changed'] = $user->password_changed;
+                $processedItem['user_role'] = $user->role;
 
-                // Ambil nama departemen dari database lokal
                 $departemenNama = 'Belum Ditentukan';
                 if ($user->departemen_id) {
-                    $dept = DB::table('tb_departemen')->where('id', $user->departemen_id)->first();
-                    if ($dept) {
-                        $departemenNama = $dept->nama;
-                    }
+                    $departemenNama = $listDepartemenKeyId[$user->departemen_id]->nama ?? 'Belum Ditentukan';
                 }
                 $processedItem['departemen_nama'] = $departemenNama;
 
-                // Ambil nama unit dari database lokal
                 $unitNama = 'Belum Ditentukan';
                 if ($user->unit_id) {
-                    $unit = DB::table('tb_unit')->where('id', $user->unit_id)->first();
-                    if ($unit) {
-                        $unitNama = $unit->nama;
-                    }
+                    $unitNama = $listUnitKeyId[$user->unit_id]->nama ?? 'Belum Ditentukan';
                 }
                 $processedItem['unit_nama'] = $unitNama;
             } else {
@@ -96,26 +115,16 @@ class KaryawanController extends Controller
                 $processedItem['departemen_id'] = null;
                 $processedItem['unit_id'] = null;
                 $processedItem['password_changed'] = false;
+                $processedItem['user_role'] = null;
                 $processedItem['departemen_nama'] = 'Belum Ditentukan';
                 $processedItem['unit_nama'] = 'Belum Ditentukan';
             }
 
-            // Update item dengan data yang sudah diproses
             foreach ($processedItem as $key => $value) {
                 $item->$key = $value;
             }
         }
 
-        // Ambil departemen dari database lokal (tb_departemen)
-        $listDepartemen = DB::table('tb_departemen')
-            ->whereNull('deleted_at')
-            ->orderBy('nama')
-            ->get();
-
-        // Ambil unit dari database lokal (tb_unit)
-        $listUnit = DB::table('tb_unit')
-            ->orderBy('nama')
-            ->get();
 
         return view('karyawan.index', compact('listKaryawan', 'listDepartemen', 'listUnit'));
     }
@@ -215,6 +224,11 @@ class KaryawanController extends Controller
             'unit_id' => 'nullable|exists:tb_unit,id',
         ];
 
+        // Hanya superadmin, admin, dan sdm yang bisa mengubah role
+        if (in_array($user->role, ['superadmin', 'admin', 'sdm'])) {
+            $rules['role'] = 'nullable|in:admin,sdm,karyawan,spv,manager';
+        }
+
         if ($request->filled('password')) {
             $rules['password'] = 'required|min:6|confirmed';
         }
@@ -249,6 +263,11 @@ class KaryawanController extends Controller
 
             if ($request->filled('unit_id')) {
                 $targetUser->unit_id = $request->unit_id;
+            }
+
+            // Update role jika user memiliki akses dan role diisi
+            if (in_array($user->role, ['superadmin', 'admin', 'sdm']) && $request->filled('role')) {
+                $targetUser->role = $request->role;
             }
 
             $passwordChanged = false;
@@ -290,7 +309,6 @@ class KaryawanController extends Controller
         $user = Auth::user();
         $targetUser = User::findOrFail($id);
 
-        // Cek akses: user sendiri atau admin/superadmin/sdm
         if ($user->id != $targetUser->id && !in_array($user->role, ['superadmin', 'admin', 'sdm'])) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -302,12 +320,13 @@ class KaryawanController extends Controller
         }
 
         try {
-            // Validasi password sesuai standar Laravel Auth
-            $request->validate([
-                'password' => 'required|min:6|confirmed',
-            ]);
+            $request->validate(
+                [
+                    'password' => 'required|min:5|confirmed',
+                    'password_confirmation' => 'required'
+                ]
+            );
 
-            // Update password
             $targetUser->password = Hash::make($request->password);
             $targetUser->password_changed = true;
             $targetUser->save();
@@ -320,8 +339,71 @@ class KaryawanController extends Controller
                 ]);
             }
 
+            return redirect()->back()->with('success', 'Password berhasil diubah.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->with('error', 'Password gagal diubah.')
+                ->with('validation_errors', $e->errors());
+        } catch (\Exception $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Password gagal diubah. ' . $e->getMessage());
+        }
+    }
+
+
+    /**
+     * Update role user
+     */
+    public function updateRole(Request $request, $id)
+    {
+        $user = Auth::user();
+        $targetUser = User::findOrFail($id);
+
+        // Hanya superadmin, admin, dan sdm yang bisa mengubah role
+        if (!in_array($user->role, ['superadmin', 'admin', 'sdm'])) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+            abort(403);
+        }
+
+        try {
+            // Validasi role
+            $request->validate([
+                'role' => 'required|in:admin,sdm,karyawan,spv,manager',
+            ]);
+
+            // Update role
+            $targetUser->role = $request->role;
+            $targetUser->save();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Role berhasil diubah.',
+                ]);
+            }
+
             return redirect()->route('karyawan')
-                ->with('success', 'Password berhasil diubah.');
+                ->with('success', 'Role berhasil diubah.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -340,5 +422,53 @@ class KaryawanController extends Controller
             }
             throw $e;
         }
+    }
+
+
+    public function updateKaryawan(Request $request, $username)
+    {
+        $user = User::where('username', $username)->first();
+
+        if (!$user) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'User tidak ditemukan, Pastikan user sudah terdaftar di sistem ini');
+        }
+        // Validasi unit harus sesuai dengan departemen
+        if ($request->filled('unit_id') && $request->filled('departemen_id')) {
+            $unit = DB::table('tb_unit')
+                ->where('id', $request->unit_id)
+                ->where('departemen_id', $request->departemen_id)
+                ->whereNull('deleted_at')
+                ->first();
+
+            if (!$unit) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Unit yang dipilih tidak sesuai dengan departemen.');
+            }
+        }
+
+
+
+        // Update user
+        $user->name = $request->name;
+        $user->email = $request->email;
+
+        if ($request->filled('departemen_id')) {
+            $user->departemen_id = $request->departemen_id;
+        } else {
+            $user->departemen_id = null;
+        }
+
+        if ($request->filled('unit_id')) {
+            $user->unit_id = $request->unit_id;
+        } else {
+            $user->unit_id = null;
+        }
+
+        $user->save();
+
+        return redirect()->back()->with('success', 'Profile berhasil diperbarui.');
     }
 }

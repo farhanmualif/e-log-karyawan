@@ -7,8 +7,8 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <!-- Title -->
             <div>
-                <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Log Aktivitas Harian</h1>
-                <p class="text-xs sm:text-sm text-gray-600 mt-1">Kelola log aktivitas harian karyawan</p>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Log Aktivitas Saya</h1>
+                <p class="text-xs sm:text-sm text-gray-600 mt-1">Kelola log aktivitas harian saya</p>
             </div>
 
             <a href="{{ route('log-aktivitas.create') }}" class="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 hover:no-underline transition-colors text-xs sm:text-sm font-medium whitespace-nowrap">
@@ -42,16 +42,6 @@
                         <option value="ditolak" {{ request('status') == 'ditolak' ? 'selected' : '' }}>Ditolak</option>
                     </select>
                 </div>
-
-                @if(Auth::user()->role != 'karyawan')
-                <!-- Filter Nama Karyawan -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Nama Karyawan</label>
-                    <input type="text" name="nama_karyawan" value="{{ request('nama_karyawan') }}" placeholder="Cari nama..." class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
-                </div>
-                @else
-                <div></div>
-                @endif
             </div>
 
             <div class="flex gap-2 mt-4">
@@ -67,30 +57,30 @@
     </div>
 
     <!-- Bulk Action Section -->
-    @if(in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']))
-    <div id="bulkActionBar" class="hidden bg-teal-50 border border-teal-200 rounded-lg p-3 sm:p-4 mb-4">
-        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
-            <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                <span class="text-xs sm:text-sm font-medium text-teal-900">
+    <!-- @if(in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']))
+    <div id="bulkActionBar" class="hidden bg-teal-50 border border-teal-200 rounded-lg p-4 mb-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-medium text-teal-900">
                     <span id="selectedCount">0</span> item dipilih
                 </span>
             </div>
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                <button type="button" id="bulkApproveBtn" class="px-3 sm:px-4 py-2 flex items-center justify-center bg-teal-600 text-white text-xs sm:text-sm rounded-lg hover:bg-teal-700 transition-colors font-medium">
-                    <i data-lucide="check-circle" class="w-4 h-4 inline mr-1.5 sm:mr-1"></i>
-                    <span class="whitespace-nowrap">Terima Massal</span>
+            <div class="flex items-center gap-2">
+                <button type="button" id="bulkApproveBtn" class="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors font-medium">
+                    <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>
+                    Setujui Massal
                 </button>
-                <button type="button" id="bulkRejectBtn" class="px-3 sm:px-4 py-2 flex items-center justify-center bg-red-600 text-white text-xs sm:text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
-                    <i data-lucide="x-circle" class="w-4 h-4 inline mr-1.5 sm:mr-1"></i>
-                    <span class="whitespace-nowrap">Tolak Massal</span>
+                <button type="button" id="bulkRejectBtn" class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
+                    <i data-lucide="x-circle" class="w-4 h-4 inline mr-1"></i>
+                    Tolak Massal
                 </button>
-                <button type="button" id="cancelBulkAction" class="px-3 sm:px-4 py-2 bg-gray-200 text-gray-700 text-xs sm:text-sm rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                <button type="button" id="cancelBulkAction" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors font-medium">
                     Batal
                 </button>
             </div>
         </div>
     </div>
-    @endif
+    @endif -->
 
     <!-- Table Section -->
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -105,8 +95,6 @@
                         @endif -->
                         <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
                         <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Karyawan</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departemen</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
                         @if(Auth::user()->role != 'karyawan')
                         <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NIK</th>
                         @endif
@@ -115,7 +103,6 @@
                         <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
-
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($logs as $log)
                     <tr class="hover:bg-gray-50">
@@ -126,18 +113,11 @@
                             @endif
                         </td>
                         @endif -->
-
                         <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-900">
                             {{ isset($log->tanggal) ? \Carbon\Carbon::parse($log->tanggal)->format('d/m/Y') : '-' }}
                         </td>
                         <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-900">
                             <div class="font-medium">{{ $log->nama_karyawan ?? '-' }}</div>
-                        </td>
-                        <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-900">
-                            <div class="font-medium">{{ $log->nama_departemen ?? 'Belum Ditentukan' }}</div>
-                        </td>
-                        <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-900">
-                            <div class="font-medium">{{ $log->nama_unit ?? 'Belum Ditentukan' }}</div>
                         </td>
                         @if(Auth::user()->role != 'karyawan')
                         <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-900">
@@ -193,7 +173,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="{{ in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']) ? (Auth::user()->role != 'karyawan' ? '8' : '7') : (Auth::user()->role != 'karyawan' ? '7' : '6') }}" class="px-4 py-2 text-center text-xs text-gray-500">
+                        <td colspan="{{ in_array(Auth::user()->role, ['spv', 'manager', 'sdm', 'superadmin']) ? (Auth::user()->role != 'karyawan' ? '7' : '6') : (Auth::user()->role != 'karyawan' ? '6' : '5') }}" class="px-4 py-2 text-center text-xs text-gray-500">
                             Tidak ada data log aktivitas
                         </td>
                     </tr>
@@ -237,9 +217,114 @@
 @endif
 
 <script>
-    // bulkAprroveRoute Di lempar ke log-aktivitas.index.js
-    window.bulkAprroveRoute = "{{ route('log-aktivitas.bulk-approve') }}"
+    $(document).ready(function() {
+
+        const $selectAllCheckbox = $('#selectAll');
+        const $itemCheckboxes = $('.item-checkbox');
+        const $bulkActionBar = $('#bulkActionBar');
+        const $selectedCountSpan = $('#selectedCount');
+        const $bulkApproveBtn = $('#bulkApproveBtn');
+        const $bulkRejectBtn = $('#bulkRejectBtn');
+        const $cancelBulkActionBtn = $('#cancelBulkAction');
+        const $bulkRejectForm = $('#bulkRejectForm');
+
+        if ($selectAllCheckbox.length) {
+            $selectAllCheckbox.on('change', function() {
+                $itemCheckboxes.prop('checked', $(this).prop('checked'));
+                updateBulkActionBar();
+            });
+        }
+
+        $itemCheckboxes.on('change', function() {
+            updateBulkActionBar();
+            if ($selectAllCheckbox.length) {
+                $selectAllCheckbox.prop(
+                    'checked',
+                    $itemCheckboxes.length === $itemCheckboxes.filter(':checked').length
+                );
+            }
+        });
+
+        function updateBulkActionBar() {
+            const selectedCount = $itemCheckboxes.filter(':checked').length;
+
+            if (selectedCount > 0) {
+                $bulkActionBar.removeClass('hidden');
+                $selectedCountSpan.text(selectedCount);
+            } else {
+                $bulkActionBar.addClass('hidden');
+            }
+        }
+
+        $bulkApproveBtn.on('click', function() {
+            const selected = $itemCheckboxes.filter(':checked');
+
+            if (selected.length === 0) {
+                alert('Pilih minimal 1 item untuk divalidasi');
+                return;
+            }
+
+            if (confirm('Apakah Anda yakin ingin menyetujui ' + selected.length + ' log aktivitas?')) {
+                const $form = $('<form>', {
+                    method: 'POST',
+                    action: '{{ route("log-aktivitas.bulk-approve") }}'
+                });
+
+                $form.append($('<input>', {
+                    type: 'hidden',
+                    name: '_token',
+                    value: '{{ csrf_token() }}'
+                }));
+
+                selected.each(function() {
+                    $form.append($('<input>', {
+                        type: 'hidden',
+                        name: 'selected_items[]',
+                        value: $(this).val()
+                    }));
+                });
+
+                $('body').append($form);
+                $form.submit();
+            }
+        });
+
+        $bulkRejectBtn.on('click', function() {
+            const selected = $itemCheckboxes.filter(':checked');
+
+            if (selected.length === 0) {
+                alert('Pilih minimal 1 item untuk ditolak');
+                return;
+            }
+
+            $bulkRejectForm.find('input[name="selected_items[]"]').remove();
+
+            selected.each(function() {
+                $bulkRejectForm.append($('<input>', {
+                    type: 'hidden',
+                    name: 'selected_items[]',
+                    value: $(this).val()
+                }));
+            });
+
+            openBulkRejectModal();
+        });
+
+        $cancelBulkActionBtn.on('click', function() {
+            $itemCheckboxes.prop('checked', false);
+            $selectAllCheckbox.prop('checked', false);
+            updateBulkActionBar();
+        });
+
+        function openBulkRejectModal() {
+            $('#bulkRejectModal').removeClass('hidden');
+        }
+
+        window.closeBulkRejectModal = function() {
+            $('#bulkRejectModal').addClass('hidden');
+        };
+
+    });
 </script>
-<script src="{{ asset('js/scripts/log-aktivitas/log-aktivitas.index.js') }}"></script>
 
 @endsection

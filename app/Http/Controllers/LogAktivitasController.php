@@ -15,10 +15,14 @@ class LogAktivitasController extends Controller
         $user = Auth::user();
         $query = DB::table('log_aktivitas')
             ->join('users', 'log_aktivitas.user_id', '=', 'users.id')
+            ->join('tb_departemen', 'users.departemen_id', '=', 'tb_departemen.id')
+            ->join('tb_unit', 'users.unit_id', '=', 'tb_unit.id')
             ->select(
                 'log_aktivitas.*',
                 'users.name as nama_karyawan',
-                'users.username as nik'
+                'users.username as nik',
+                'tb_departemen.nama as nama_departemen',
+                'tb_unit.nama as nama_unit'
             );
 
         if ($user->role === 'karyawan') {
@@ -80,6 +84,8 @@ class LogAktivitasController extends Controller
                     'user_id' => $log->user_id,
                     'nama_karyawan' => $log->nama_karyawan,
                     'nik' => $log->nik,
+                    'nama_departemen' => $log->nama_departemen ?? 'Belum Ditentukan',
+                    'nama_unit' => $log->nama_unit ?? 'Belum Ditentukan',
                     'status' => $log->status,
                     'logs' => [],
                     'total_aktivitas' => 0,
@@ -119,6 +125,86 @@ class LogAktivitasController extends Controller
         );
 
         return view('log-aktivitas.index', ['logs' => $paginated]);
+    }
+
+    public function myActivity(Request $request)
+    {
+        $user = Auth::user();
+        $query = DB::table('log_aktivitas')
+            ->join('users', 'log_aktivitas.user_id', '=', 'users.id')
+            ->select(
+                'log_aktivitas.*',
+                'users.name as nama_karyawan',
+                'users.username as nik'
+            )->where('users.id', $user->id);
+
+
+        // Filter berdasarkan tanggal
+        if ($request->filled('tanggal_dari')) {
+            $query->where('log_aktivitas.tanggal', '>=', $request->tanggal_dari);
+        }
+        if ($request->filled('tanggal_sampai')) {
+            $query->where('log_aktivitas.tanggal', '<=', $request->tanggal_sampai);
+        }
+
+        // Filter berdasarkan status
+        if ($request->filled('status')) {
+            $query->where('log_aktivitas.status', $request->status);
+        }
+
+        $allLogs = $query->orderBy('log_aktivitas.tanggal', 'desc')
+            ->orderBy('log_aktivitas.waktu_awal', 'desc')
+            ->orderBy('log_aktivitas.created_at', 'desc')
+            ->get();
+
+        $groupedLogs = [];
+        foreach ($allLogs as $log) {
+            $key = $log->tanggal . '_' . $log->user_id;
+            if (!isset($groupedLogs[$key])) {
+                $groupedLogs[$key] = [
+                    'tanggal' => $log->tanggal,
+                    'user_id' => $log->user_id,
+                    'nama_karyawan' => $log->nama_karyawan,
+                    'nik' => $log->nik,
+                    'status' => $log->status,
+                    'logs' => [],
+                    'total_aktivitas' => 0,
+                    'status_count' => [
+                        'menunggu' => 0,
+                        'tervalidasi' => 0,
+                        'ditolak' => 0
+                    ]
+                ];
+            }
+            $groupedLogs[$key]['logs'][] = $log;
+            $groupedLogs[$key]['total_aktivitas']++;
+
+            // Hitung jumlah per status
+            if (isset($log->status) && in_array($log->status, ['menunggu', 'tervalidasi', 'ditolak'])) {
+                $groupedLogs[$key]['status_count'][$log->status]++;
+            }
+
+            if ($log->status == 'menunggu') {
+                $groupedLogs[$key]['status'] = 'menunggu';
+            }
+        }
+
+        $groupedCollection = collect($groupedLogs)->values();
+        $perPage = 15;
+        $currentPage = $request->get('page', 1);
+        $items = $groupedCollection->slice(($currentPage - 1) * $perPage, $perPage)->map(function ($item) {
+            return (object) $item;
+        })->all();
+
+        $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $groupedCollection->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('log-aktivitas.my-activity', ['logs' => $paginated]);
     }
 
     /**
@@ -294,7 +380,8 @@ class LogAktivitasController extends Controller
             'tanggal' => $tanggal,
             'status' => $status,
             'departemen_nama' => $departemenNama,
-            'unit_nama' => $unitNama
+            'unit_nama' => $unitNama,
+            'karyawan_role' => $karyawan->role ?? 'karyawan'
         ]);
     }
 
@@ -314,21 +401,22 @@ class LogAktivitasController extends Controller
             abort(403);
         }
 
-        // Cek akses berdasarkan hierarki (menggunakan unit_id dan departemen_id dari log_aktivitas)
+        $karyawan = DB::table('users')->where('id', $log->user_id)->first();
+        $karyawanRole = $karyawan->role ?? 'karyawan';
+
         $hasAccess = false;
 
         if ($user->role === 'spv') {
-            // SPV: bisa validasi log karyawan di unitnya (berdasarkan unit_id di log_aktivitas)
-            if ($user->unit_id && $log->unit_id) {
+            if ($karyawanRole === 'manager') {
+                $hasAccess = false;
+            } elseif ($user->unit_id && $log->unit_id) {
                 $hasAccess = ($user->unit_id == $log->unit_id);
             }
         } elseif ($user->role === 'manager') {
-            // Manager: bisa validasi log semua unit dalam departemennya (berdasarkan departemen_id di log_aktivitas)
             if ($user->departemen_id && $log->departemen_id) {
                 $hasAccess = ($user->departemen_id == $log->departemen_id);
             }
         } elseif (in_array($user->role, ['sdm', 'superadmin', 'admin'])) {
-            // SDM/Superadmin/Admin: bisa validasi semua log
             $hasAccess = true;
         }
 
@@ -368,17 +456,19 @@ class LogAktivitasController extends Controller
             abort(403);
         }
 
-        // Cek akses berdasarkan hierarki
         $karyawan = DB::table('users')->where('id', $log->user_id)->first();
+        $karyawanRole = $karyawan->role ?? 'karyawan';
         $hasAccess = false;
 
         if ($user->role === 'spv') {
-            // SPV: bisa tolak log karyawan di unitnya
-            if ($user->unit_id && $karyawan->unit_id) {
+            // SPV: bisa tolak log karyawan di unitnya, TIDAK bisa tolak manager
+            if ($karyawanRole === 'manager') {
+                $hasAccess = false;
+            } elseif ($user->unit_id && $karyawan->unit_id) {
                 $hasAccess = ($user->unit_id == $karyawan->unit_id);
             }
         } elseif ($user->role === 'manager') {
-            // Manager: bisa tolak log semua unit dalam departemennya
+            // Manager: bisa tolak log semua unit dalam departemennya (karyawan dan SPV)
             if ($user->departemen_id && $karyawan->unit_id) {
                 $unit = DB::table('tb_unit')
                     ->where('id', $karyawan->unit_id)
@@ -386,8 +476,8 @@ class LogAktivitasController extends Controller
                     ->first();
                 $hasAccess = ($unit !== null);
             }
-        } elseif (in_array($user->role, ['sdm', 'superadmin'])) {
-            // SDM/Superadmin: bisa tolak semua log
+        } elseif (in_array($user->role, ['sdm', 'superadmin', 'admin'])) {
+            // SDM/Superadmin/Admin: bisa tolak semua log
             $hasAccess = true;
         }
 
@@ -438,16 +528,22 @@ class LogAktivitasController extends Controller
                 continue;
             }
 
-            // Cek akses berdasarkan hierarki
+            // Ambil role karyawan yang punya log
+            $karyawan = DB::table('users')->where('id', $user_id)->first();
+            $karyawanRole = $karyawan->role ?? 'karyawan';
+
+            // Cek akses berdasarkan hierarki dan role
             $hasAccess = false;
 
             if ($user->role === 'spv') {
-                // SPV: bisa validasi log di unitnya (berdasarkan unit_id di log_aktivitas)
-                if ($user->unit_id && $firstLog->unit_id) {
+                // SPV: bisa validasi log di unitnya, TIDAK bisa validasi manager
+                if ($karyawanRole === 'manager') {
+                    $hasAccess = false;
+                } elseif ($user->unit_id && $firstLog->unit_id) {
                     $hasAccess = ($user->unit_id == $firstLog->unit_id);
                 }
             } elseif ($user->role === 'manager') {
-                // Manager: bisa validasi log di departemennya (berdasarkan departemen_id di log_aktivitas)
+                // Manager: bisa validasi log di departemennya (karyawan dan SPV)
                 if ($user->departemen_id && $firstLog->departemen_id) {
                     $hasAccess = ($user->departemen_id == $firstLog->departemen_id);
                 }
@@ -492,15 +588,20 @@ class LogAktivitasController extends Controller
         foreach ($request->selected_items as $item) {
             list($tanggal, $user_id) = explode('_', $item);
 
-            // Cek akses berdasarkan hierarki
+            // Cek akses berdasarkan hierarki dan role
             $karyawan = DB::table('users')->where('id', $user_id)->first();
+            $karyawanRole = $karyawan->role ?? 'karyawan';
             $hasAccess = false;
 
             if ($user->role === 'spv') {
-                if ($user->unit_id && $karyawan->unit_id) {
+                // SPV: bisa tolak log di unitnya, TIDAK bisa tolak manager
+                if ($karyawanRole === 'manager') {
+                    $hasAccess = false;
+                } elseif ($user->unit_id && $karyawan->unit_id) {
                     $hasAccess = ($user->unit_id == $karyawan->unit_id);
                 }
             } elseif ($user->role === 'manager') {
+                // Manager: bisa tolak log di departemennya (karyawan dan SPV)
                 if ($user->departemen_id && $karyawan->unit_id) {
                     $unit = DB::table('tb_unit')
                         ->where('id', $karyawan->unit_id)
@@ -508,7 +609,7 @@ class LogAktivitasController extends Controller
                         ->first();
                     $hasAccess = ($unit !== null);
                 }
-            } elseif (in_array($user->role, ['sdm', 'superadmin'])) {
+            } elseif (in_array($user->role, ['sdm', 'superadmin', 'admin'])) {
                 $hasAccess = true;
             }
 
@@ -556,16 +657,22 @@ class LogAktivitasController extends Controller
 
         $allowedLogIds = [];
         foreach ($logs as $log) {
-            // Cek akses berdasarkan unit_id dan departemen_id dari log_aktivitas
+            // Ambil role karyawan yang punya log
+            $karyawan = DB::table('users')->where('id', $log->user_id)->first();
+            $karyawanRole = $karyawan->role ?? 'karyawan';
+
+            // Cek akses berdasarkan unit_id, departemen_id, dan role
             $hasAccess = false;
 
             if ($user->role === 'spv') {
-                // SPV: bisa validasi log di unitnya (berdasarkan unit_id di log_aktivitas)
-                if ($user->unit_id && $log->unit_id) {
+                // SPV: bisa validasi log di unitnya, TIDAK bisa validasi manager
+                if ($karyawanRole === 'manager') {
+                    $hasAccess = false;
+                } elseif ($user->unit_id && $log->unit_id) {
                     $hasAccess = ($user->unit_id == $log->unit_id);
                 }
             } elseif ($user->role === 'manager') {
-                // Manager: bisa validasi log di departemennya (berdasarkan departemen_id di log_aktivitas)
+                // Manager: bisa validasi log di departemennya (karyawan dan SPV)
                 if ($user->departemen_id && $log->departemen_id) {
                     $hasAccess = ($user->departemen_id == $log->departemen_id);
                 }
@@ -623,16 +730,22 @@ class LogAktivitasController extends Controller
 
         $allowedLogIds = [];
         foreach ($logs as $log) {
-            // Cek akses berdasarkan unit_id dan departemen_id dari log_aktivitas
+            // Ambil role karyawan yang punya log
+            $karyawan = DB::table('users')->where('id', $log->user_id)->first();
+            $karyawanRole = $karyawan->role ?? 'karyawan';
+
+            // Cek akses berdasarkan unit_id, departemen_id, dan role
             $hasAccess = false;
 
             if ($user->role === 'spv') {
-                // SPV: bisa validasi log di unitnya (berdasarkan unit_id di log_aktivitas)
-                if ($user->unit_id && $log->unit_id) {
+                // SPV: bisa tolak log di unitnya, TIDAK bisa tolak manager
+                if ($karyawanRole === 'manager') {
+                    $hasAccess = false;
+                } elseif ($user->unit_id && $log->unit_id) {
                     $hasAccess = ($user->unit_id == $log->unit_id);
                 }
             } elseif ($user->role === 'manager') {
-                // Manager: bisa validasi log di departemennya (berdasarkan departemen_id di log_aktivitas)
+                // Manager: bisa tolak log di departemennya (karyawan dan SPV)
                 if ($user->departemen_id && $log->departemen_id) {
                     $hasAccess = ($user->departemen_id == $log->departemen_id);
                 }
@@ -700,7 +813,26 @@ class LogAktivitasController extends Controller
             abort(404);
         }
 
-        if ($user->role === 'karyawan' && $log->user_id != $user->id) {
+        // Ambil role karyawan yang punya log
+        $karyawan = DB::table('users')->where('id', $log->user_id)->first();
+        $karyawanRole = $karyawan->role ?? 'karyawan';
+
+        // Cek permission berdasarkan role
+        if ($user->role === 'karyawan') {
+            // Karyawan hanya bisa edit log sendiri
+            if ($log->user_id != $user->id) {
+                abort(403);
+            }
+        } elseif ($user->role === 'spv') {
+            // SPV tidak bisa edit log manager
+            if ($karyawanRole === 'manager') {
+                abort(403);
+            }
+            // SPV bisa edit log karyawan di unitnya (sudah di-handle di akses view)
+        } elseif ($user->role === 'manager') {
+            // Manager bisa edit log karyawan dan SPV di departemennya (sudah di-handle di akses view)
+        } elseif (!in_array($user->role, ['sdm', 'superadmin', 'admin'])) {
+            // Hanya admin, sdm, superadmin yang bisa edit semua
             abort(403);
         }
 

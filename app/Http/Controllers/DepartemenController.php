@@ -28,11 +28,15 @@ class DepartemenController extends Controller
      */
     public function index(Request $request)
     {
-        // Ambil semua departemen tanpa pagination (untuk client-side filtering)
         $departemen = DB::table('tb_departemen')
             ->whereNull('deleted_at')
             ->orderBy('nama', 'asc')
             ->get();
+
+        $departemen->map(function ($item) {
+            $item->nama = ucwords(strtolower($item->nama));
+            return $item;
+        });
 
         return view('data-master.departemen.index', compact('departemen'));
     }
@@ -144,7 +148,6 @@ class DepartemenController extends Controller
             abort(404);
         }
 
-        // Cek apakah ada unit yang menggunakan departemen ini
         $unitCount = DB::table('tb_unit')
             ->where('departemen_id', $id)
             ->count();

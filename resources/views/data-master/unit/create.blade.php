@@ -79,7 +79,7 @@
                     <i data-lucide="save" class="w-4 h-4"></i>
                     Simpan
                 </button>
-                <a href="{{ route('unit.index') }}" class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                <a href="{{ route('unit.index') }}" class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 hover:no-underline transition-colors font-medium">
                     Batal
                 </a>
             </div>

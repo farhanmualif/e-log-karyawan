@@ -6,10 +6,10 @@
     <div class="mb-6">
         <div class="flex items-center justify-between gap-4 mb-4">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Tambah Log Aktivitas</h1>
-                <p class="text-sm text-gray-600 mt-1">Input aktivitas harian Anda</p>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Tambah Log Aktivitas</h1>
+                <p class="text-xs sm:text-sm text-gray-600 mt-1">Input aktivitas harian Anda</p>
             </div>
-            <a href="{{ route('log-aktivitas.index') }}" class="flex items-center text-white px-3 py-2  hover:no-underline border rounded-lg bg-gray-600 hover:bg-gray-900">
+            <a href="{{ route('log-aktivitas.index') }}" class="flex items-center text-white px-3 py-2 text-xs sm:text-sm hover:no-underline border rounded-lg bg-gray-600 hover:bg-gray-900 font-medium">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
                 Kembali
             </a>
@@ -24,12 +24,12 @@
                 <i data-lucide="alert-triangle" class="h-5 w-5 text-yellow-400"></i>
             </div>
             <div class="ml-3 flex-1">
-                <h3 class="text-sm font-medium text-yellow-800 mb-2">
+                <h3 class="text-xs sm:text-sm font-medium text-yellow-800 mb-2">
                     Departemen dan Unit Belum Di atur
                 </h3>
-                <div class="text-sm text-yellow-700">
+                <div class="text-xs sm:text-sm text-yellow-700">
                     <p class="mb-2">Anda harus menentukan <strong>Departemen</strong> dan <strong>Unit</strong> terlebih dahulu sebelum dapat menambahkan log aktivitas.</p>
-                    <a href="{{ route('profile.show') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium">
+                    <a href="{{ route('profile.show') }}" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-600 text-white text-xs sm:text-sm rounded-lg hover:bg-yellow-700 transition-colors font-medium">
                         <i data-lucide="user" class="w-4 h-4"></i>
                         Update Profile Sekarang
                     </a>
@@ -47,10 +47,10 @@
                 <i data-lucide="x-circle" class="h-5 w-5 text-red-400"></i>
             </div>
             <div class="ml-3 flex-1">
-                <h3 class="text-sm font-medium text-red-800 mb-2">
+                <h3 class="text-xs sm:text-sm font-medium text-red-800 mb-2">
                     Tidak Dapat Menambahkan Log Aktivitas
                 </h3>
-                <div class="text-sm text-red-700">
+                <div class="text-xs sm:text-sm text-red-700">
                     @if(!Auth::user()->departemen_id && !Auth::user()->unit_id)
                     <p class="mb-2">Departemen dan Unit Anda belum ditentukan.</p>
                     @elseif(!Auth::user()->departemen_id)
@@ -59,7 +59,7 @@
                     <p class="mb-2">Unit Anda belum ditentukan.</p>
                     @endif
                     <p class="mb-3">Silakan tentukan <strong>Departemen</strong> dan <strong>Unit</strong> di menu Profile terlebih dahulu.</p>
-                    <a href="{{ route('profile.show') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                    <a href="{{ route('profile.show') }}" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 text-white text-xs sm:text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
                         <i data-lucide="user" class="w-4 h-4"></i>
                         Buka Menu Profile
                     </a>
@@ -77,12 +77,12 @@
                 <i data-lucide="x-circle" class="h-5 w-5 text-red-400"></i>
             </div>
             <div class="ml-3 flex-1">
-                <h3 class="text-sm font-medium text-red-800 mb-2">
+                <h3 class="text-xs sm:text-sm font-medium text-red-800 mb-2">
                     Tidak Dapat Menambahkan Log Aktivitas
                 </h3>
-                <div class="text-sm text-red-700">
+                <div class="text-xs sm:text-sm text-red-700">
                     <p class="mb-3">{{ $message }}</p>
-                    <a href="{{ route('profile.show') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                    <a href="{{ route('profile.show') }}" class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 text-white text-xs sm:text-sm rounded-lg hover:bg-red-700 transition-colors font-medium">
                         <i data-lucide="user" class="w-4 h-4"></i>
                         Buka Menu Profile
                     </a>
@@ -99,9 +99,9 @@
 
             <!-- Tanggal Field -->
             <div class="mb-6">
-                <label for="tanggal" class="block text-sm font-medium text-gray-700 mb-2">
+                <label for="tanggal" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     <div class="flex items-center">
-                        <i data-lucide="calendar" class="w-5 h-5 text-teal-500 mr-2"></i>
+                        <i data-lucide="calendar" class="w-4 h-4 sm:w-5 sm:h-5 text-teal-500 mr-2"></i>
                         Tanggal
                     </div>
                 </label>
@@ -111,9 +111,9 @@
                     value="{{ old('tanggal', $today) }}"
                     max="{{ $today }}"
                     required
-                    class="w-full px-4 py-3 border @error('tanggal') border-red-300 @else border-gray-300 @enderror rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-150 ease-in-out @error('tanggal') bg-red-50 @else bg-gray-50 @enderror">
+                    class="w-full px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm border @error('tanggal') border-red-300 @else border-gray-300 @enderror rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-150 ease-in-out @error('tanggal') bg-red-50 @else bg-gray-50 @enderror">
                 @error('tanggal')
-                <p class="mt-2 text-sm text-red-600 flex items-center">
+                <p class="mt-2 text-xs text-red-600 flex items-center">
                     <i data-lucide="alert-circle" class="w-4 h-4 mr-1"></i>
                     {{ $message }}
                 </p>
@@ -124,14 +124,14 @@
 
             <!-- Aktivitas Harian Section -->
             <div class="mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <label class="block text-sm font-medium text-gray-700">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700">
                         <div class="flex items-center">
-                            <i data-lucide="file-text" class="w-5 h-5 text-teal-500 mr-2"></i>
+                            <i data-lucide="file-text" class="w-4 h-4 sm:w-5 sm:h-5 text-teal-500 mr-2"></i>
                             Aktivitas Harian
                         </div>
                     </label>
-                    <button type="button" id="tambahAktivitas" class="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors font-medium">
+                    <button type="button" id="tambahAktivitas" class="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-teal-600 text-white text-xs sm:text-sm rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors font-medium">
                         <i data-lucide="plus" class="w-4 h-4"></i>
                         Tambah Aktivitas
                     </button>
@@ -140,14 +140,14 @@
                 <!-- Container untuk multiple aktivitas -->
                 <div id="aktivitasContainer" class="space-y-4">
                     <!-- Aktivitas Item Template (akan di-clone) -->
-                    <div class="aktivitas-item border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div class="aktivitas-item border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
                         <div class="flex items-start justify-between mb-4">
                             <div class="flex items-center gap-2">
-                                <span class="aktivitas-number text-sm font-medium text-gray-600">#1</span>
-                                <span class="text-sm text-gray-500">Aktivitas</span>
+                                <span class="aktivitas-number text-xs sm:text-sm font-medium text-gray-600">#1</span>
+                                <span class="text-xs sm:text-sm text-gray-500">Aktivitas</span>
                             </div>
                             <button type="button" class="hapus-aktivitas hidden text-red-600 hover:text-red-800 transition-colors" title="Hapus aktivitas">
-                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                <i data-lucide="trash-2" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                             </button>
                         </div>
 
@@ -187,27 +187,25 @@
 
                         <!-- Aktivitas Textarea -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                                 Deskripsi Aktivitas
                             </label>
                             <textarea
                                 name="aktivitas[0][aktivitas]"
                                 rows="4"
                                 required
-                                minlength="10"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-150 ease-in-out bg-white"
+                                class="w-full px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-150 ease-in-out bg-white"
                                 placeholder="Jelaskan aktivitas, tugas, atau kegiatan kerja yang Anda lakukan (minimal 10 karakter)..."></textarea>
-                            <p class="mt-1 text-xs text-gray-500">Minimal 10 karakter</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Info Box -->
-            <div class="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-6">
+            <div class="bg-teal-50 border border-teal-200 rounded-lg p-3 sm:p-4 mb-6">
                 <div class="flex items-start">
-                    <i data-lucide="info" class="w-5 h-5 text-teal-600 mr-2 mt-0.5"></i>
-                    <div class="text-sm text-teal-800">
+                    <i data-lucide="info" class="w-4 h-4 sm:w-5 sm:h-5 text-teal-600 mr-2 mt-0.5"></i>
+                    <div class="text-xs sm:text-sm text-teal-800">
                         <p class="font-medium mb-1">Tips Menulis Log Aktivitas:</p>
                         <ul class="list-disc list-inside space-y-1 text-teal-700">
                             <li>Jelaskan aktivitas dengan detail dan jelas</li>
@@ -220,12 +218,12 @@
             </div>
 
             <!-- Button Actions -->
-            <div class="flex items-center gap-3">
-                <button type="submit" class="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-sm text-white rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors font-medium">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                <button type="submit" class="flex items-center justify-center gap-2 px-3 py-1.5 bg-teal-600 text-xs sm:text-sm text-white rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors font-medium">
                     <i data-lucide="save" class="w-4 h-4"></i>
                     Simpan Log
                 </button>
-                <a href="{{ route('log-aktivitas.index') }}" class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                <a href="{{ route('log-aktivitas.index') }}" class="px-3 py-1.5 text-xs sm:text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-center">
                     Batal
                 </a>
             </div>
@@ -233,6 +231,6 @@
     </div>
 </div>
 
-<script src="{{ asset('js/scripts/log-aktifitas/create.js') }}"></script>
+<script src="{{ asset('js/scripts/log-aktivitas/create.js') }}"></script>
 
 @endsection
