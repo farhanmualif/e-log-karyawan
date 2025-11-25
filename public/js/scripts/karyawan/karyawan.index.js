@@ -336,6 +336,8 @@ function applyFilters() {
     });
 }
 
+function canceleEmployeeDetail() {}
+
 $(document).ready(function () {
     $(document).on('keydown', function (event) {
         if (event.key === 'Escape') {

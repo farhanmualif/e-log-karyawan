@@ -879,7 +879,7 @@ class LogAktivitasController extends Controller
             ->first();
 
         if (!$log) {
-            abort(404);
+            return redirect()->back()->with('error', 'Log aktivitas Gagal dihapus.');
         }
 
         DB::table('log_aktivitas')->where('id', $id)->delete();

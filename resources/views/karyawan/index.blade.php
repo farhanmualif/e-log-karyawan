@@ -77,14 +77,25 @@
                         </th>
 
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Departemen
+                        </th>
+
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Unit
+                        </th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Role
+                        </th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Supervisor
+                        </th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Manager
                         </th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Status Sistem
                         </th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Departemen
-                        </th>
+
                         @if(Auth::user()->role != 'karyawan')
                         <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Aksi
@@ -95,9 +106,7 @@
 
                 <!-- Table Body -->
                 <tbody id="karyawanTableBody" class="bg-white divide-y divide-gray-100">
-
                     @foreach ( $listKaryawan as $karyawan )
-
                     <tr class="hover:bg-gray-50 transition-colors">
                         @if (in_array(Auth::user()->role, ['admin','spv','sdm','superadmin']))
                         <td class="px-4 py-2 whitespace-nowrap">
@@ -116,7 +125,19 @@
                         </td>
 
                         <td class="px-4 py-2 whitespace-nowrap">
-                            <span class="text-xs text-gray-900">{{ $karyawan->unit_nama ?? 'Belum Di tentukan'}}</span>
+                            <span class="text-xs text-gray-900">{{ $karyawan->departemen_nama ?? 'Belum Di tentukan'}}</span>
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap">
+                            <span class="text-xs text-gray-600">{{ $karyawan->unit_nama ?? 'Belum ditentukan'}}</span>
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap">
+                            <span class="text-xs text-gray-900">{{ $karyawan->user_role ?? 'Belum Di tentukan'}}</span>
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap">
+                            <span class="text-xs text-gray-900">{{ $karyawan->supervisor ?? '-'}}</span>
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap">
+                            <span class="text-xs text-gray-900">{{ $karyawan->manager ?? '-'}}</span>
                         </td>
                         <td class="px-4 py-2 whitespace-nowrap">
                             @if(isset($karyawan->is_registered) && $karyawan->is_registered)
@@ -129,9 +150,7 @@
                             </span>
                             @endif
                         </td>
-                        <td class="px-4 py-2 whitespace-nowrap">
-                            <span class="text-xs text-gray-600">{{ $karyawan->departemen_nama ?? 'Belum ditentukan'}}</span>
-                        </td>
+
                         @if(Auth::user()->role != 'karyawan')
                         <td class="px-4 py-2 whitespace-nowrap text-right">
                             <div class="flex items-center justify-end gap-2">
@@ -331,8 +350,6 @@
                         </select>
                     </div>
                     <!-- Password Field -->
-
-
                     <!-- Password Confirmation -->
                     <!-- <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Konfirmasi Password</label>
@@ -365,7 +382,7 @@
 
                     <!-- Footer -->
                     <div class="border-t border-gray-200 px-4 md:px-6 py-3 md:py-4 bg-gray-50 flex flex-col sm:flex-row justify-end gap-2 md:gap-3">
-                        <button onclick="closeEmployeeDetail()" class="w-full sm:w-auto px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm font-medium touch-manipulation">
+                        <button type="button" onclick="closeEmployeeDetail(); return false;" class="w-full sm:w-auto px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm font-medium touch-manipulation">
                             Cancel
                         </button>
                         <button type="submit" class="w-full sm:w-auto px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-xs sm:text-sm font-medium touch-manipulation">

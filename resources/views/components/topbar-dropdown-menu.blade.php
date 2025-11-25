@@ -7,7 +7,17 @@
 
             <!-- Dropdown Menu -->
             <div id="userDropdown" onclick="event.stopPropagation()" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <a href="{{ route('profile.show') }}" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                <div class="flex justify-between px-4 py-2.5 border-b">
+                    <div class="flex-row gap-2">
+                        <h3>{{ Auth::user()->name }}</h3>
+                        <span class="text-xs text-gray-400">{{ Auth::user()->username }}</span>
+                    </div>
+                    <div class="rounded-full flex items-center justify-center h-8 w-8 bg-teal-600 text-white text-sm font-semibold hover:ring-2">
+                        {{ substr(Auth::user()->name, 0, 1) }}
+                    </div>
+
+                </div>
+                <a href="{{ route('profile.show') }}" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 hover:no-underline transition-colors">
                     <i data-lucide="user" class="w-4 h-4 text-gray-600"></i>
                     <span class="text-sm text-gray-700">Profile</span>
                 </a>

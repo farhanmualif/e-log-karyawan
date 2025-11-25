@@ -165,10 +165,22 @@ $hasActionPermission = $canPerformAction();
                     <button type="button" onclick="openEditModal('{{ $log->id }}')" class="text-blue-600 hover:text-blue-900 transition-colors" title="Edit">
                         <i data-lucide="pencil" class="w-4 h-4"></i>
                     </button>
+
+
                     @else
                     <button type="button" disabled class="text-gray-400 cursor-not-allowed" title="Tidak dapat diedit">
                         <i data-lucide="pencil" class="w-4 h-4"></i>
                     </button>
+                    @endif
+
+                    @if (Auth::id() == $log->user_id && $log->status == 'menunggu')
+                    <form method="post" action="{{ route('log-aktivitas.destroy', $log->id) }}" onsubmit="alert('apakah anda yakin menghapus catatan ini?')">
+                        @method('delete')
+                        @csrf
+                        <button type="submit">
+                            <i data-lucide="trash" class="w-4 h-4 text-red-600"></i>
+                        </button>
+                    </form>
                     @endif
                 </div>
             </div>
@@ -375,13 +387,11 @@ $hasActionPermission = $canPerformAction();
         const $bulkRejectBtn = $('#bulkRejectBtn');
         const $cancelBulkActionBtn = $('#cancelBulkAction');
 
-        // == SELECT ALL ==
         $selectAll.on('change', function() {
             $logCheckboxes.prop('checked', $(this).is(':checked'));
             updateBulkActionBar();
         });
 
-        // == ITEM CHECKBOX ==
         $logCheckboxes.on('change', function() {
             updateBulkActionBar();
             $selectAll.prop(
@@ -401,7 +411,6 @@ $hasActionPermission = $canPerformAction();
             }
         }
 
-        // == BULK APPROVE ==
         $bulkApproveBtn.on('click', function() {
             const selected = $logCheckboxes.filter(':checked');
 
@@ -429,7 +438,6 @@ $hasActionPermission = $canPerformAction();
             }
         });
 
-        // == BULK REJECT ==
         $bulkRejectBtn.on('click', function() {
             const selected = $logCheckboxes.filter(':checked');
 
@@ -448,14 +456,12 @@ $hasActionPermission = $canPerformAction();
             openModal('#bulkRejectModal');
         });
 
-        // == CANCEL ==
         $cancelBulkActionBtn.on('click', function() {
             $logCheckboxes.prop('checked', false);
             $selectAll.prop('checked', false);
             updateBulkActionBar();
         });
 
-        // == HELPER: input hidden ==
         function csrfInput() {
             return $('<input>', {
                 type: 'hidden',
@@ -472,7 +478,6 @@ $hasActionPermission = $canPerformAction();
             });
         }
 
-        // == MODAL HELPERS ==
         function openModal(id) {
             $(id).removeClass('hidden');
         }
@@ -489,7 +494,6 @@ $hasActionPermission = $canPerformAction();
             $('#rejectAllModal').addClass('hidden');
         };
 
-        // == OPEN EDIT MODAL ==
         window.openEditModal = function(logId) {
             const $el = $(`[data-log-id="${logId}"]`);
 
@@ -510,7 +514,6 @@ $hasActionPermission = $canPerformAction();
             $('#editModal').removeClass('hidden');
         };
 
-        // == CLOSE EDIT MODAL ==
         window.closeEditModal = function() {
             $('#editModal').addClass('hidden');
 
@@ -518,7 +521,6 @@ $hasActionPermission = $canPerformAction();
             destroyTimepicker('#edit_waktu_akhir');
         };
 
-        // == FORM SUBMIT VALIDATION ==
         $('#editForm').on('submit', function(e) {
             const waktuAwal = $('#edit_waktu_awal').val();
             const waktuAkhir = $('#edit_waktu_akhir').val();

@@ -13,7 +13,6 @@ class KaryawanController extends Controller
     public function index(Request $request)
     {
         $perPage = 10;
-
         $listKaryawan = DB::connection('mysql_khanza')
             ->table('pegawai')
             ->join('departemen', 'pegawai.departemen', '=', 'departemen.dep_id')
@@ -37,15 +36,12 @@ class KaryawanController extends Controller
             ->get();
 
         $listDepartemenKeyId = $listDepartemen->keyBy('id');
-
-        $listUnit = DB::table('tb_unit')
-            ->orderBy('nama')
-            ->get()
-            ->keyBy('id');
-
+        $listUnit = DB::table('tb_unit')->orderBy('nama')->get()->keyBy('id');
         $listUnitKeyId = $listUnit->keyBy('id');
 
-        // Process each item in the paginated results
+        $listSupervisor = DB::table('users')->select('id', 'name', 'username', 'role', 'unit_id', 'departemen_id')->where('role', 'spv')->get()->keyBy('unit_id');
+        $listManager = DB::table('users')->select('id', 'name', 'username', 'role', 'unit_id', 'departemen_id')->where('role', 'manager')->get()->keyBy('departemen_id');
+
         $items = $listKaryawan->items();
         foreach ($items as $item) {
             $data = (array) $item;
@@ -57,21 +53,16 @@ class KaryawanController extends Controller
             });
 
             $parts = array_filter($parts, function ($p) {
-                return trim($p) !== ''; // Hilangkan string kosong
+                return trim($p) !== '';
             });
 
-            $parts = array_values($parts); // Reset index
+            $parts = array_values($parts);
 
-            // Jika kosong semua
             if (count($parts) === 0) {
                 $initial = 'NA';
-            }
-            // Jika 1 kata
-            elseif (count($parts) === 1) {
+            } elseif (count($parts) === 1) {
                 $initial = strtoupper(mb_substr($parts[0], 0, 1));
-            }
-            // Jika lebih dari 1 kata
-            else {
+            } else {
                 $initial = strtoupper(
                     mb_substr($parts[0], 0, 1) .
                         mb_substr($parts[1], 0, 1)
@@ -97,7 +88,9 @@ class KaryawanController extends Controller
                 $processedItem['departemen_id'] = $listDepartemenKeyId[$user->departemen_id]->id ?? "Belum Ditentukan";
                 $processedItem['unit_id'] = $listUnitKeyId[$user->unit_id]->id ?? "Belum Ditentukan";
                 $processedItem['password_changed'] = $user->password_changed;
-                $processedItem['user_role'] = $user->role;
+                $processedItem['user_role'] = ucwords(strtolower($user->role));
+                $processedItem['supervisor'] = $listSupervisor[$user->unit_id]->name ?? '-';
+                $processedItem['manager'] = $listManager[$user->departemen_id]->name ?? '-';
 
                 $departemenNama = 'Belum Ditentukan';
                 if ($user->departemen_id) {
@@ -115,16 +108,17 @@ class KaryawanController extends Controller
                 $processedItem['departemen_id'] = null;
                 $processedItem['unit_id'] = null;
                 $processedItem['password_changed'] = false;
-                $processedItem['user_role'] = null;
+                $processedItem['user_role'] = '-';
                 $processedItem['departemen_nama'] = 'Belum Ditentukan';
                 $processedItem['unit_nama'] = 'Belum Ditentukan';
+                $processedItem['supervisor'] = null;
+                $processedItem['manager'] = null;
             }
 
             foreach ($processedItem as $key => $value) {
                 $item->$key = $value;
             }
         }
-
 
         return view('karyawan.index', compact('listKaryawan', 'listDepartemen', 'listUnit'));
     }
