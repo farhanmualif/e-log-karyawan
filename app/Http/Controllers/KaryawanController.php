@@ -195,11 +195,31 @@ class KaryawanController extends Controller
         $user = Auth::user();
         $targetUser = User::findOrFail($id);
 
+        // Validasi akses berdasarkan role
         if ($user->id != $targetUser->id && !in_array($user->role, ['superadmin', 'admin', 'sdm'])) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['message' => 'Unauthorized'], 403);
+            // Validasi untuk SPV: hanya bisa akses karyawan di unitnya
+            if ($user->role === 'spv') {
+                if (!$user->unit_id || $targetUser->unit_id != $user->unit_id) {
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['message' => 'Anda tidak memiliki akses untuk mengubah data karyawan di unit lain.'], 403);
+                    }
+                    abort(403, 'Anda tidak memiliki akses untuk mengubah data karyawan di unit lain.');
+                }
             }
-            abort(403);
+            // Validasi untuk Manager: hanya bisa akses karyawan di departemennya
+            elseif ($user->role === 'manager') {
+                if (!$user->departemen_id || $targetUser->departemen_id != $user->departemen_id) {
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['message' => 'Anda tidak memiliki akses untuk mengubah data karyawan di departemen lain.'], 403);
+                    }
+                    abort(403, 'Anda tidak memiliki akses untuk mengubah data karyawan di departemen lain.');
+                }
+            } else {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['message' => 'Unauthorized'], 403);
+                }
+                abort(403);
+            }
         }
 
         if ($user->id == $targetUser->id) {
@@ -273,12 +293,15 @@ class KaryawanController extends Controller
 
             $targetUser->name = $request->name;
 
-            if ($request->filled('departemen_id')) {
-                $targetUser->departemen_id = $request->departemen_id;
-            }
+            // Hanya superadmin, admin, dan sdm yang bisa mengubah departemen/unit
+            if (in_array($user->role, ['superadmin', 'admin', 'sdm'])) {
+                if ($request->filled('departemen_id')) {
+                    $targetUser->departemen_id = $request->departemen_id;
+                }
 
-            if ($request->filled('unit_id')) {
-                $targetUser->unit_id = $request->unit_id;
+                if ($request->filled('unit_id')) {
+                    $targetUser->unit_id = $request->unit_id;
+                }
             }
 
             // Update role jika user memiliki akses dan role diisi
@@ -325,14 +348,40 @@ class KaryawanController extends Controller
         $user = Auth::user();
         $targetUser = User::findOrFail($id);
 
+        // Validasi akses berdasarkan role
         if ($user->id != $targetUser->id && !in_array($user->role, ['superadmin', 'admin', 'sdm'])) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
+            // Validasi untuk SPV: hanya bisa akses karyawan di unitnya
+            if ($user->role === 'spv') {
+                if (!$user->unit_id || $targetUser->unit_id != $user->unit_id) {
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Anda tidak memiliki akses untuk mengubah password karyawan di unit lain.'
+                        ], 403);
+                    }
+                    abort(403, 'Anda tidak memiliki akses untuk mengubah password karyawan di unit lain.');
+                }
             }
-            abort(403);
+            // Validasi untuk Manager: hanya bisa akses karyawan di departemennya
+            elseif ($user->role === 'manager') {
+                if (!$user->departemen_id || $targetUser->departemen_id != $user->departemen_id) {
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Anda tidak memiliki akses untuk mengubah password karyawan di departemen lain.'
+                        ], 403);
+                    }
+                    abort(403, 'Anda tidak memiliki akses untuk mengubah password karyawan di departemen lain.');
+                }
+            } else {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unauthorized'
+                    ], 403);
+                }
+                abort(403);
+            }
         }
 
         try {
@@ -401,6 +450,18 @@ class KaryawanController extends Controller
             abort(403);
         }
 
+        // Validasi tambahan: SPV dan Manager tidak bisa mengubah role
+        // (sudah di-handle di atas, tapi untuk kejelasan)
+        if (in_array($user->role, ['spv', 'manager'])) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses untuk mengubah role karyawan.'
+                ], 403);
+            }
+            abort(403, 'Anda tidak memiliki akses untuk mengubah role karyawan.');
+        }
+
         try {
             // Validasi role
             $request->validate([
@@ -443,12 +504,35 @@ class KaryawanController extends Controller
 
     public function updateKaryawan(Request $request, $username)
     {
-        $user = User::where('username', $username)->first();
+        $currentUser = Auth::user();
+        $targetUser = User::where('username', $username)->first();
 
-        if (!$user) {
+        if (!$targetUser) {
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'User tidak ditemukan, Pastikan user sudah terdaftar di sistem ini');
+        }
+
+        // Validasi akses berdasarkan role
+        if ($currentUser->id != $targetUser->id && !in_array($currentUser->role, ['superadmin', 'admin', 'sdm'])) {
+            // Validasi untuk SPV: hanya bisa akses karyawan di unitnya
+            if ($currentUser->role === 'spv') {
+                if (!$currentUser->unit_id || $targetUser->unit_id != $currentUser->unit_id) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Anda tidak memiliki akses untuk mengubah data karyawan di unit lain.');
+                }
+            }
+            // Validasi untuk Manager: hanya bisa akses karyawan di departemennya
+            elseif ($currentUser->role === 'manager') {
+                if (!$currentUser->departemen_id || $targetUser->departemen_id != $currentUser->departemen_id) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Anda tidak memiliki akses untuk mengubah data karyawan di departemen lain.');
+                }
+            } else {
+                abort(403, 'Unauthorized');
+            }
         }
         // Validasi unit harus sesuai dengan departemen
         if ($request->filled('unit_id') && $request->filled('departemen_id')) {
@@ -468,22 +552,25 @@ class KaryawanController extends Controller
 
 
         // Update user
-        $user->name = $request->name;
-        $user->email = $request->email;
+        $targetUser->name = $request->name;
+        $targetUser->email = $request->email;
 
-        if ($request->filled('departemen_id')) {
-            $user->departemen_id = $request->departemen_id;
-        } else {
-            $user->departemen_id = null;
+        // SPV dan Manager tidak bisa mengubah departemen/unit karyawan
+        if (in_array($currentUser->role, ['superadmin', 'admin', 'sdm'])) {
+            if ($request->filled('departemen_id')) {
+                $targetUser->departemen_id = $request->departemen_id;
+            } else {
+                $targetUser->departemen_id = null;
+            }
+
+            if ($request->filled('unit_id')) {
+                $targetUser->unit_id = $request->unit_id;
+            } else {
+                $targetUser->unit_id = null;
+            }
         }
 
-        if ($request->filled('unit_id')) {
-            $user->unit_id = $request->unit_id;
-        } else {
-            $user->unit_id = null;
-        }
-
-        $user->save();
+        $targetUser->save();
 
         return redirect()->back()->with('success', 'Profile berhasil diperbarui.');
     }

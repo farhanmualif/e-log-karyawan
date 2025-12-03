@@ -72,6 +72,19 @@ class UnitController extends Controller
      */
     public function store(Request $request)
     {
+        // Cek apakah unit sudah ada dan terhapus di departemen yang sama
+        $deletedUnit = DB::table('tb_unit')
+            ->where('nama', $request->nama)
+            ->where('departemen_id', $request->departemen_id)
+            ->whereNotNull('deleted_at')
+            ->first();
+
+        if ($deletedUnit) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Nama unit sudah ada dan terhapus. Silahkan cek di halaman <a href="' . route('unit.trashed') . '" class="underline font-semibold">Lihat Unit Terhapus</a>.');
+        }
+
         $validator = Validator::make($request->all(), [
             'departemen_id' => 'required|exists:tb_departemen,id',
             'nama' => [
@@ -79,7 +92,8 @@ class UnitController extends Controller
                 'string',
                 'max:150',
                 Rule::unique('tb_unit', 'nama')->where(function ($query) use ($request) {
-                    return $query->where('departemen_id', $request->departemen_id);
+                    return $query->where('departemen_id', $request->departemen_id)
+                        ->whereNull('deleted_at');
                 }),
             ],
         ], [
@@ -222,5 +236,64 @@ class UnitController extends Controller
 
         return redirect()->route('unit.index')
             ->with('success', 'Unit berhasil dihapus.');
+    }
+
+    /**
+     * Menampilkan daftar unit yang sudah dihapus
+     */
+    public function trashed()
+    {
+        $unit = DB::table('tb_unit')
+            ->leftJoin('tb_departemen', 'tb_unit.departemen_id', '=', 'tb_departemen.id')
+            ->whereNotNull('tb_unit.deleted_at')
+            ->select(
+                'tb_unit.*',
+                'tb_departemen.nama as nama_departemen'
+            )
+            ->orderBy('tb_unit.deleted_at', 'desc')
+            ->get();
+
+        $departemen = DB::table('tb_departemen')
+            ->whereNull('deleted_at')
+            ->orderBy('nama', 'asc')
+            ->get();
+
+        return view('data-master.unit.trashed', compact('unit', 'departemen'));
+    }
+
+    /**
+     * Restore unit yang sudah dihapus
+     */
+    public function restore($id)
+    {
+        $unit = DB::table('tb_unit')
+            ->where('id', $id)
+            ->whereNotNull('deleted_at')
+            ->first();
+
+        if (!$unit) {
+            abort(404);
+        }
+
+        // Cek apakah departemen masih ada
+        $departemen = DB::table('tb_departemen')
+            ->where('id', $unit->departemen_id)
+            ->whereNull('deleted_at')
+            ->first();
+
+        if (!$departemen) {
+            return redirect()->route('unit.trashed')
+                ->with('error', 'Unit tidak dapat dikembalikan karena departemennya sudah dihapus.');
+        }
+
+        DB::table('tb_unit')
+            ->where('id', $id)
+            ->update([
+                'deleted_at' => null,
+                'updated_at' => now(),
+            ]);
+
+        return redirect()->route('unit.trashed')
+            ->with('success', 'Unit berhasil dikembalikan.');
     }
 }

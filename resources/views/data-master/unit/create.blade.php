@@ -18,6 +18,15 @@
 
     <!-- Form Section -->
     <div class="bg-white rounded-lg border border-gray-200 p-6">
+        @if(session('error'))
+        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div class="flex items-center">
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-600 mr-2"></i>
+                <p class="text-sm text-red-800">{!! session('error') !!}</p>
+            </div>
+        </div>
+        @endif
+
         <form method="POST" action="{{ route('unit.store') }}">
             @csrf
 

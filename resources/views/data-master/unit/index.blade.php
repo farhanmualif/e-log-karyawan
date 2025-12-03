@@ -32,6 +32,10 @@
                     @endforeach
                 </select>
 
+                <a href="{{ route('unit.trashed') }}" class="flex items-center gap-2 px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 hover:no-underline transition-colors text-sm font-medium whitespace-nowrap">
+                    <i data-lucide="archive" class="w-4 h-4"></i>
+                    Lihat Unit Terhapus
+                </a>
                 <a href="{{ route('unit.create') }}" class="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 hover:no-underline transition-colors text-sm font-medium whitespace-nowrap">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     Tambah Unit

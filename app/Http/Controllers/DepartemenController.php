@@ -54,6 +54,18 @@ class DepartemenController extends Controller
      */
     public function store(Request $request)
     {
+        // Cek apakah nama sudah ada dan terhapus
+        $deletedDepartemen = DB::table('tb_departemen')
+            ->where('nama', $request->nama)
+            ->whereNotNull('deleted_at')
+            ->first();
+
+        if ($deletedDepartemen) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Nama departemen sudah ada dan terhapus. Silahkan cek di halaman <a href="' . route('departemen.trashed') . '" class="underline font-semibold">Lihat Departemen Terhapus</a>.');
+        }
+
         $validator = Validator::make($request->all(), [
             'nama' => 'required|string|max:150|unique:tb_departemen,nama,NULL,id,deleted_at,NULL',
         ], [
@@ -166,5 +178,48 @@ class DepartemenController extends Controller
 
         return redirect()->route('departemen.index')
             ->with('success', 'Departemen berhasil dihapus.');
+    }
+
+    /**
+     * Menampilkan daftar departemen yang sudah dihapus
+     */
+    public function trashed()
+    {
+        $departemen = DB::table('tb_departemen')
+            ->whereNotNull('deleted_at')
+            ->orderBy('deleted_at', 'desc')
+            ->get();
+
+        $departemen->map(function ($item) {
+            $item->nama = ucwords(strtolower($item->nama));
+            return $item;
+        });
+
+        return view('data-master.departemen.trashed', compact('departemen'));
+    }
+
+    /**
+     * Restore departemen yang sudah dihapus
+     */
+    public function restore($id)
+    {
+        $departemen = DB::table('tb_departemen')
+            ->where('id', $id)
+            ->whereNotNull('deleted_at')
+            ->first();
+
+        if (!$departemen) {
+            abort(404);
+        }
+
+        DB::table('tb_departemen')
+            ->where('id', $id)
+            ->update([
+                'deleted_at' => null,
+                'updated_at' => now(),
+            ]);
+
+        return redirect()->route('departemen.trashed')
+            ->with('success', 'Departemen berhasil dikembalikan.');
     }
 }

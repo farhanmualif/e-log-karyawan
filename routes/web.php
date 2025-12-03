@@ -65,6 +65,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/data-master/departemen/{id}/edit', 'DepartemenController@edit')->name('departemen.edit');
     Route::put('/data-master/departemen/{id}', 'DepartemenController@update')->name('departemen.update');
     Route::delete('/data-master/departemen/{id}', 'DepartemenController@destroy')->name('departemen.destroy');
+    Route::get('/data-master/departemen/trashed', 'DepartemenController@trashed')->name('departemen.trashed');
+    Route::post('/data-master/departemen/{id}/restore', 'DepartemenController@restore')->name('departemen.restore');
 
     // Data Master - Unit Routes
     Route::get('/data-master/unit', 'UnitController@index')->name('unit.index');
@@ -73,4 +75,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/data-master/unit/{id}/edit', 'UnitController@edit')->name('unit.edit');
     Route::put('/data-master/unit/{id}', 'UnitController@update')->name('unit.update');
     Route::delete('/data-master/unit/{id}', 'UnitController@destroy')->name('unit.destroy');
+    Route::get('/data-master/unit/trashed', 'UnitController@trashed')->name('unit.trashed');
+    Route::post('/data-master/unit/{id}/restore', 'UnitController@restore')->name('unit.restore');
 });
