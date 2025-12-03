@@ -54,6 +54,9 @@ class HomeController extends Controller
         $sevenDaysAgo = Carbon::now()->subDays(6)->startOfDay();
         $trendLogQuery = DB::table('log_aktivitas')->where('tanggal', '>=', $sevenDaysAgo);
         $filterLogQuery($trendLogQuery);
+
+        // Untuk timeline chart, default hanya hari ini saja
+        $today = Carbon::now()->startOfDay();
         $trendLogRaw = $trendLogQuery->select(
             DB::raw('DATE(tanggal) as date'),
             DB::raw('COUNT(*) as total')
@@ -133,7 +136,7 @@ class HomeController extends Controller
         $activityTimelineQuery = DB::table('log_aktivitas')
             ->leftJoin('users', 'log_aktivitas.user_id', '=', 'users.id')
             ->leftJoin('tb_departemen', 'log_aktivitas.departemen_id', '=', 'tb_departemen.id')
-            ->where('tanggal', '>=', $sevenDaysAgo)
+            ->whereDate('tanggal', $today)
             ->whereNotNull('log_aktivitas.user_id');
         $filterLogQuery($activityTimelineQuery);
 

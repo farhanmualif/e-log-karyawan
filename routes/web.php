@@ -55,8 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/log-aktivitas/detail-activity/{user_id}', 'LogAktivitasController@detailActivity')->name('log-aktivitas.detail-activity');
     Route::get('/log-aktivitas/detail-activity-by-departemen/{departemen_id}', 'LogAktivitasController@detailActivityByDepId')->name('log-aktivitas.detail-activity-by-departemen');
     Route::get('/log-aktivitas/detail-activity-by-departemen/{departemen_id}/user/{user_id}/activities', 'LogAktivitasController@getActivitiesByUser')->name('log-aktivitas.get-activities-by-user');
-    Route::get('/api/log-activity/status', 'Api\ApiDashboard@getLogActivityStatus')->name('log-activity.status');
-    Route::get('/api/log-activity/departemen', 'Api\ApiDashboard@getActivityByDepartemen')->name('log-activity.departemen');
+
 
     // Data Master - Departemen Routes
     Route::get('/data-master/departemen', 'DepartemenController@index')->name('departemen.index');
@@ -77,4 +76,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/data-master/unit/{id}', 'UnitController@destroy')->name('unit.destroy');
     Route::get('/data-master/unit/trashed', 'UnitController@trashed')->name('unit.trashed');
     Route::post('/data-master/unit/{id}/restore', 'UnitController@restore')->name('unit.restore');
+
+
+    // Api
+    Route::get('/api/log-activity/status', 'Api\ApiDashboard@getLogActivityStatus')->name('log-activity.status');
+    Route::get('/api/log-activity/departemen', 'Api\ApiDashboard@getActivityByDepartemen')->name('log-activity.departemen');
+    Route::get('/api/log-activity/get-activity-perjam', 'Api\ApiDashboard@getActivityPerjam')->name('log-activity.perjam');
 });

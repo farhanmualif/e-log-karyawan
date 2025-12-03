@@ -143,6 +143,10 @@
         <div class="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
             <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Distribusi Aktivitas per Jam</h3>
             <p class="text-xs text-gray-500 mb-3 sm:mb-4">Pola waktu aktivitas seluruh karyawan dalam jam kerja</p>
+            <div class="flex flex-col sm:flex-row gap-2 justify-end mb-3 sm:mb-4">
+                <input type="date" name="activity_perjam_date" id="activity_perjam_date" class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                <button type="button" id="resetBtnActivityPerjam" class="px-3 py-2 bg-gray-500 border border-gray-500 text-white hover:bg-gray-600 focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 rounded-md text-sm font-medium transition-colors w-full sm:w-auto">Reset</button>
+            </div>
             <div id="activityPerHourChart" class="w-full overflow-x-auto"></div>
         </div>
 
@@ -186,6 +190,7 @@
     window.deptIdsDetail = @json($deptIdsDetail);
     window.routeGetLogStatus = '{{ route("log-activity.status") }}';
     window.routeGetActivityDepartemen = '{{ route("log-activity.departemen") }}';
+    window.routeGetActivityPerjam = '{{ route("log-activity.perjam") }}';
 </script>
 <script src="{{ asset('js/scripts/home.js') }}"></script>
 <script src="{{ asset('js/scripts/utils/create-chart-option.js') }}"></script>

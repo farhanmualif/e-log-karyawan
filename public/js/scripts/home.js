@@ -57,30 +57,45 @@ $(document).ready(function () {
     topKaryawanChart.render();
 
     // 4. Distribusi Aktivitas per Jam (Gantt/Timeline Chart - 1 bar = 1 karyawan)
-    const karyawanNames = window.karyawanList ? window.karyawanList.map((k) => k.name) : [];
-
+    let activityPerHourChart = null;
     const colorPalette = ['#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#f97316', '#6366f1', '#84cc16', '#eab308', '#22c55e', '#a855f7', '#f43f5e'];
 
-    // Assign warna ke setiap data point
-    const timelineDataWithColors = (window.timelineSeries || []).map((item, index) => {
-        return {
-            ...item,
-            fillColor: colorPalette[index % colorPalette.length],
-        };
-    });
+    function initializeActivityPerHourChart(timelineSeriesData, karyawanNamesList) {
+        const karyawanNames = karyawanNamesList || (window.karyawanList ? window.karyawanList.map((k) => k.name) : []);
 
-    const timelineSeries = [
-        {
-            name: 'Aktivitas',
-            data: timelineDataWithColors,
-        },
-    ];
+        // Assign warna ke setiap data point
+        const timelineDataWithColors = (timelineSeriesData || []).map((item, index) => {
+            return {
+                ...item,
+                fillColor: colorPalette[index % colorPalette.length],
+            };
+        });
 
-    var activityPerHourOptions = createGanttChart(timelineSeries, karyawanNames, {
-        chartHeight: Math.max(400, karyawanNames.length * 40),
-    });
-    var activityPerHourChart = new ApexCharts(document.querySelector('#activityPerHourChart'), activityPerHourOptions);
-    activityPerHourChart.render();
+        const timelineSeries = [
+            {
+                name: 'Aktivitas',
+                data: timelineDataWithColors,
+            },
+        ];
+
+        const activityPerHourOptions = createGanttChart(timelineSeries, karyawanNames, {
+            chartHeight: Math.max(400, karyawanNames.length * 40),
+        });
+
+        const $chartContainer = $('#activityPerHourChart');
+        $chartContainer.empty();
+
+        if (activityPerHourChart) {
+            activityPerHourChart.destroy();
+        }
+
+        activityPerHourChart = new ApexCharts(document.querySelector('#activityPerHourChart'), activityPerHourOptions);
+        activityPerHourChart.render();
+    }
+
+    // Initialize chart dengan data awal
+    const initialKaryawanNames = window.karyawanList ? window.karyawanList.map((k) => k.name) : [];
+    initializeActivityPerHourChart(window.timelineSeries || [], initialKaryawanNames);
 
     // 5. Distribusi Aktivitas per Departemen Detail (Bar Chart)
     const activityPerDepartemenSeries = [
@@ -326,5 +341,77 @@ $(document).ready(function () {
 
         // Reset chart to initial data
         updateActivityDepartemenChart(window.deptNamesDetail || [], window.deptTotalDetail || [], window.deptIdsDetail || []);
+    });
+
+    // Activity Per Jam Chart Functions
+    function updateActivityPerHourChart(timelineSeriesData, karyawanListData) {
+        const karyawanNames = karyawanListData ? karyawanListData.map((k) => k.name) : [];
+        initializeActivityPerHourChart(timelineSeriesData || [], karyawanNames);
+    }
+
+    function loadActivityPerJamData(date) {
+        if (!window.routeGetActivityPerjam) {
+            console.error('Route getActivityPerjam tidak ditemukan');
+            return;
+        }
+
+        const $chartContainer = $('#activityPerHourChart');
+
+        $.ajax({
+            url: window.routeGetActivityPerjam,
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                Accept: 'application/json',
+            },
+            data: {
+                activity_perjam_date: date || null,
+            },
+            beforeSend: function () {
+                if (!activityPerHourChart) {
+                    $chartContainer.html('<div class="flex items-center justify-center h-64"><div class="text-gray-500">Memuat data...</div></div>');
+                } else {
+                    $chartContainer.css('opacity', '0.5');
+                }
+            },
+            success: function (response) {
+                $chartContainer.css('opacity', '1');
+
+                if (response.status === 'success' && response.data) {
+                    updateActivityPerHourChart(response.data.timelineSeries || [], response.data.karyawanList || []);
+                } else {
+                    console.error('Response tidak valid:', response);
+                    $chartContainer.html('<div class="flex items-center justify-center h-64"><div class="text-red-500">Error memuat data</div></div>');
+                }
+            },
+            error: function (xhr, status, error) {
+                $chartContainer.css('opacity', '1');
+                console.error('Error loading activity per jam data:', error);
+                $chartContainer.html('<div class="flex items-center justify-center h-64"><div class="text-red-500">Error: ' + error + '</div></div>');
+            },
+        });
+    }
+
+    // Handle activity per jam date filter change
+    $('#activity_perjam_date').on('change', function () {
+        const selectedDate = $(this).val();
+
+        if (selectedDate) {
+            loadActivityPerJamData(selectedDate);
+        } else {
+            // Reset to initial data
+            const initialKaryawanNames = window.karyawanList ? window.karyawanList.map((k) => k.name) : [];
+            updateActivityPerHourChart(window.timelineSeries || [], window.karyawanList || []);
+        }
+    });
+
+    // Reset button for activity per jam
+    $('#resetBtnActivityPerjam').on('click', function () {
+        // Reset date input
+        $('#activity_perjam_date').val('');
+
+        // Reset chart to initial data
+        const initialKaryawanNames = window.karyawanList ? window.karyawanList.map((k) => k.name) : [];
+        updateActivityPerHourChart(window.timelineSeries || [], window.karyawanList || []);
     });
 });
