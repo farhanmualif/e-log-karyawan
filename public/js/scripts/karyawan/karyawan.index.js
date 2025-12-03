@@ -238,13 +238,40 @@ function saveEmployeeDetail() {
 }
 
 $(document).on('click', '.menu-toggle-btn', function (e) {
+    e.preventDefault();
     e.stopPropagation();
-    const $dropdown = $(this).next('.menu-dropdown');
+
+    const $button = $(this);
+    const $parent = $button.closest('.relative.inline-block');
+    const $dropdown = $parent.find('.menu-dropdown').first();
     const $allDropdowns = $('.menu-dropdown');
 
     $allDropdowns.not($dropdown).addClass('hidden');
 
-    $dropdown.toggleClass('hidden');
+    if ($dropdown.length) {
+        const isHidden = $dropdown.hasClass('hidden');
+
+        if (isHidden) {
+            const buttonOffset = $button.offset();
+            const buttonWidth = $button.outerWidth();
+            const buttonHeight = $button.outerHeight();
+
+            const rightPosition = $(window).width() - (buttonOffset.left + buttonWidth);
+            const topPosition = buttonOffset.top + buttonHeight + 8;
+
+            $dropdown.css({
+                position: 'fixed',
+                top: topPosition + 'px',
+                right: rightPosition + 'px',
+                left: 'auto',
+                'z-index': '9999',
+            });
+        }
+
+        $dropdown.toggleClass('hidden');
+    } else {
+        console.warn('Dropdown not found for menu toggle button');
+    }
 });
 
 $(document).on('click', function (e) {
@@ -307,36 +334,34 @@ window.closeChangeRoleModal = function () {
     }
 };
 
-function applyFilters() {
-    const filterValue = $('#filterDepartemen').val();
-    const searchValue = $('#searchInput').val().toLowerCase();
+let searchTimeout;
 
-    $('#karyawanTableBody tr').each(function () {
-        let showRow = true;
+function loadData() {
+    const search = $('#searchInput').val();
+    const filter = $('#filterDepartemen').val();
 
-        if (filterValue && filterValue !== 'Semua Departemen') {
-            const departemen = $(this).find('td:eq(4)').text().trim();
-            if (departemen !== filterValue) {
-                showRow = false;
-            }
-        }
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (filter && filter !== 'Semua Departemen') params.append('filter_departemen', filter);
 
-        if (showRow && searchValue) {
-            const rowText = $(this).text().toLowerCase();
-            if (rowText.indexOf(searchValue) === -1) {
-                showRow = false;
-            }
-        }
+    const url = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
 
-        if (showRow) {
-            $(this).show();
-        } else {
-            $(this).hide();
+    $('#karyawanTableBody').html('<tr><td colspan="100%" class="text-center py-4">Loading...</td></tr>');
+
+    $.get(url, function (response) {
+        const $html = $(response);
+        $('#karyawanTableBody').html($html.find('#karyawanTableBody').html());
+        $('.pagination').first().replaceWith($html.find('.pagination').first());
+
+        // Close all dropdowns after reload
+        $('.menu-dropdown').addClass('hidden');
+
+        // Re-initialize Lucide icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
         }
     });
 }
-
-function canceleEmployeeDetail() {}
 
 $(document).ready(function () {
     $(document).on('keydown', function (event) {
@@ -350,11 +375,12 @@ $(document).ready(function () {
     });
 
     $('#filterDepartemen').on('change', function () {
-        applyFilters();
+        loadData();
     });
 
     $('#searchInput').on('keyup', function () {
-        applyFilters();
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(loadData, 500);
     });
 
     $('#employeeDepartemenSelect').on('change', function () {
@@ -386,5 +412,18 @@ $(document).ready(function () {
         openEmployeeDetail(employeeId, name, email, role, department, joinedDate, initials, userId, departemenId, unitId, passwordChanged, departemenNama, unitNama, isRegistered, userRole);
     });
 
-    applyFilters();
+    $(document).on('click', '.pagination a', function (e) {
+        e.preventDefault();
+        const url = $(this).attr('href');
+        if (url) {
+            const search = $('#searchInput').val();
+            const filter = $('#filterDepartemen').val();
+            const urlObj = new URL(url, window.location.origin);
+            if (search) urlObj.searchParams.set('search', search);
+            else urlObj.searchParams.delete('search');
+            if (filter && filter !== 'Semua Departemen') urlObj.searchParams.set('filter_departemen', filter);
+            else urlObj.searchParams.delete('filter_departemen');
+            window.location.href = urlObj.toString();
+        }
+    });
 });

@@ -178,17 +178,17 @@
 
                                 @if(isset($karyawan->is_registered) && $karyawan->is_registered && isset($karyawan->user_id))
                                 <!-- Dropdown Menu -->
-                                <div class="relative inline-block">
+                                <div class="relative inline-block" style="z-index: 1000;">
                                     <button
                                         type="button"
-                                        class="menu-toggle-btn text-gray-400 hover:text-gray-600 transition-colors"
+                                        class="menu-toggle-btn text-gray-400 hover:text-gray-600 transition-colors relative z-10"
                                         title="Menu"
                                         data-user-id="{{ $karyawan->user_id }}"
                                         data-user-name="{{ $karyawan->nama }}">
                                         <i data-lucide="more-vertical" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                                     </button>
                                     <!-- Dropdown Content -->
-                                    <div class="menu-dropdown hidden absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                    <div class="menu-dropdown hidden absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-lg shadow-xl border border-gray-200" style="z-index: 9999;">
                                         <div class="py-1">
                                             <button
                                                 type="button"

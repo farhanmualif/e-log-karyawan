@@ -52,6 +52,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/log-aktivitas/bulk-reject', 'LogAktivitasController@bulkReject')->name('log-aktivitas.bulk-reject');
     Route::post('/log-aktivitas/bulk-approve-ids', 'LogAktivitasController@bulkApproveByIds')->name('log-aktivitas.bulk-approve-ids');
     Route::post('/log-aktivitas/bulk-reject-ids', 'LogAktivitasController@bulkRejectByIds')->name('log-aktivitas.bulk-reject-ids');
+    Route::get('/log-aktivitas/detail-activity/{user_id}', 'LogAktivitasController@detailActivity')->name('log-aktivitas.detail-activity');
+    Route::get('/log-aktivitas/detail-activity-by-departemen/{departemen_id}', 'LogAktivitasController@detailActivityByDepId')->name('log-aktivitas.detail-activity-by-departemen');
+    Route::get('/log-aktivitas/detail-activity-by-departemen/{departemen_id}/user/{user_id}/activities', 'LogAktivitasController@getActivitiesByUser')->name('log-aktivitas.get-activities-by-user');
+    Route::get('/api/log-activity/status', 'Api\ApiDashboard@getLogActivityStatus')->name('log-activity.status');
+    Route::get('/api/log-activity/departemen', 'Api\ApiDashboard@getActivityByDepartemen')->name('log-activity.departemen');
 
     // Data Master - Departemen Routes
     Route::get('/data-master/departemen', 'DepartemenController@index')->name('departemen.index');

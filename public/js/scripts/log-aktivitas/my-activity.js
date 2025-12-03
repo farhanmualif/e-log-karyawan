@@ -42,26 +42,12 @@ $(document).ready(function () {
             return;
         }
 
-        if (!csrfToken) {
-            alert('CSRF token tidak ditemukan. Silakan refresh halaman.');
-            return;
-        }
-
-        const bulkApproveRoute = window.bulkApproveRoute || window.bulkAprroveRoute;
-        console.log(bulkApproveRoute);
-        if (!bulkApproveRoute) {
-            alert('Route tidak ditemukan. Silakan refresh halaman.');
-            return;
-        }
-
         if (confirm('Apakah Anda yakin ingin menyetujui ' + selected.length + ' log aktivitas?')) {
             const $form = $('<form>', {
                 method: 'POST',
-                action: bulkApproveRoute,
-                id: 'bulkApproveForm',
+                action: window.routeBulkApprove,
             });
 
-            // Add CSRF token
             $form.append(
                 $('<input>', {
                     type: 'hidden',
@@ -70,24 +56,16 @@ $(document).ready(function () {
                 })
             );
 
-            // Add selected items
             selected.each(function () {
-                const itemValue = $(this).val();
-                if (itemValue) {
-                    $form.append(
-                        $('<input>', {
-                            type: 'hidden',
-                            name: 'selected_items[]',
-                            value: itemValue,
-                        })
-                    );
-                }
+                $form.append(
+                    $('<input>', {
+                        type: 'hidden',
+                        name: 'selected_items[]',
+                        value: $(this).val(),
+                    })
+                );
             });
 
-            // Remove any existing form with same ID
-            $('#bulkApproveForm').remove();
-
-            // Append and submit
             $('body').append($form);
             $form.submit();
         }

@@ -1,7 +1,7 @@
  <!-- Sidebar Overlay (Mobile Only) -->
  <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"></div>
 
- <aside id="sidebar" class="w-64 bg-teal-700 text-white flex flex-col h-screen fixed left-0 top-0 z-50 transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0 sidebar-default">
+ <aside id="sidebar" class="w-64 bg-teal-700 text-white flex flex-col h-screen fixed left-0 top-0 transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0 sidebar-default">
 
      <!-- Logo Section -->
      <div class="p-4 border-b border-gray-700">

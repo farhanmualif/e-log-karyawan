@@ -99,7 +99,7 @@ class LoginController extends Controller
         if (!$user) {
             $pegawai = DB::connection('mysql_khanza')
                 ->table('pegawai')
-                ->where('nik', $username)
+                ->whereRaw('BINARY nik = ?', [$username])
                 ->first();
 
             if ($pegawai) {

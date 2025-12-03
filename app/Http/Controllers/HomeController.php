@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -51,8 +52,7 @@ class HomeController extends Controller
 
         // Trend Log Aktivitas 7 Hari Terakhir (Line Chart) - Format data siap pakai
         $sevenDaysAgo = Carbon::now()->subDays(6)->startOfDay();
-        $trendLogQuery = DB::table('log_aktivitas')
-            ->where('tanggal', '>=', $sevenDaysAgo);
+        $trendLogQuery = DB::table('log_aktivitas')->where('tanggal', '>=', $sevenDaysAgo);
         $filterLogQuery($trendLogQuery);
         $trendLogRaw = $trendLogQuery->select(
             DB::raw('DATE(tanggal) as date'),
@@ -76,12 +76,15 @@ class HomeController extends Controller
             $trendCounts[] = isset($dateMap[$date]) ? $dateMap[$date] : 0;
         }
 
-        //  Log Aktivitas per Departemen (Bar Chart) - Format data siap pakai
+        //  Top 5 Log Aktivitas per Departemen (Bar Chart) - Format data siap pakai
         $logPerDepartemenQuery = DB::table('log_aktivitas')
             ->join('tb_departemen', 'log_aktivitas.departemen_id', '=', 'tb_departemen.id')
             ->whereNull('tb_departemen.deleted_at')
             ->whereNotNull('log_aktivitas.departemen_id');
+
         $filterLogQuery($logPerDepartemenQuery);
+
+        // Query untuk Top 5
         $logPerDepartemenRaw = $logPerDepartemenQuery->select('tb_departemen.nama', DB::raw('COUNT(log_aktivitas.id) as total'))
             ->groupBy('tb_departemen.nama')
             ->orderBy('total', 'desc')
@@ -90,6 +93,23 @@ class HomeController extends Controller
 
         $deptNames = $logPerDepartemenRaw->pluck('nama')->toArray();
         $deptCounts = $logPerDepartemenRaw->pluck('total')->toArray();
+
+        // Query untuk semua departemen (detail)
+        $logPerDepartemenDetailQuery = DB::table('log_aktivitas')
+            ->join('tb_departemen', 'log_aktivitas.departemen_id', '=', 'tb_departemen.id')
+            ->whereNull('tb_departemen.deleted_at')
+            ->whereNotNull('log_aktivitas.departemen_id');
+
+        $filterLogQuery($logPerDepartemenDetailQuery);
+
+        $logPerDepartemenDetailRaw = $logPerDepartemenDetailQuery->select('tb_departemen.id as departemen_id', 'tb_departemen.nama', DB::raw('COUNT(log_aktivitas.id) as total'))
+            ->groupBy('tb_departemen.id', 'tb_departemen.nama')
+            ->orderBy('total', 'desc')
+            ->get();
+
+        $deptNamesDetail = $logPerDepartemenDetailRaw->pluck('nama')->toArray();
+        $deptTotalDetail = $logPerDepartemenDetailRaw->pluck('total')->toArray();
+        $deptIdsDetail = $logPerDepartemenDetailRaw->pluck('departemen_id')->toArray();
 
         // Top 5 Karyawan Paling Aktif (Bulan ini) - Format data siap pakai
         $topKaryawanQuery = DB::table('log_aktivitas')
@@ -110,30 +130,97 @@ class HomeController extends Controller
         $karyawanNames = $topKaryawanRaw->pluck('name')->toArray();
         $karyawanCounts = $topKaryawanRaw->pluck('total')->toArray();
 
-        // Distribusi Aktivitas per Jam (Jam kerja 8-17) - Format data siap pakai
-        $activityPerHourQuery = DB::table('log_aktivitas')
+        $activityTimelineQuery = DB::table('log_aktivitas')
+            ->leftJoin('users', 'log_aktivitas.user_id', '=', 'users.id')
+            ->leftJoin('tb_departemen', 'log_aktivitas.departemen_id', '=', 'tb_departemen.id')
             ->where('tanggal', '>=', $sevenDaysAgo)
-            ->whereBetween(DB::raw('HOUR(waktu_awal)'), [8, 17]);
-        $filterLogQuery($activityPerHourQuery);
-        $activityPerHourRaw = $activityPerHourQuery->select(
-            DB::raw('HOUR(waktu_awal) as hour'),
-            DB::raw('COUNT(*) as total')
+            ->whereNotNull('log_aktivitas.user_id');
+        $filterLogQuery($activityTimelineQuery);
+
+        $activityTimelineData = $activityTimelineQuery->select(
+            'users.id as user_id',
+            'users.name as nama_karyawan',
+            'users.username as nik_karyawan',
+            'tb_departemen.nama as nama_departemen',
+            'log_aktivitas.aktivitas',
+            'log_aktivitas.tanggal',
+            'log_aktivitas.waktu_awal',
+            'log_aktivitas.waktu_akhir',
+            'log_aktivitas.id as activity_id'
         )
-            ->groupBy('hour')
-            ->orderBy('hour', 'asc')
+            ->orderBy('users.name', 'asc')
+            ->orderBy('log_aktivitas.tanggal', 'desc')
+            ->orderBy('log_aktivitas.waktu_awal', 'asc')
             ->get();
 
-        $hourLabels = [];
-        $hourCounts = [];
-        $hourMap = [];
-        foreach ($activityPerHourRaw as $item) {
-            $hourMap[$item->hour] = $item->total;
+        // Group by karyawan dan format untuk timeline chart
+        $timelineData = [];
+        $karyawanList = [];
+        $karyawanIndexMap = [];
+
+        foreach ($activityTimelineData as $activity) {
+            $userId = $activity->user_id;
+            $karyawanName = $activity->nama_karyawan ?? 'Unknown';
+
+            if (!isset($karyawanIndexMap[$userId])) {
+                $karyawanIndexMap[$userId] = count($karyawanList);
+                $karyawanList[] = [
+                    'id' => $userId,
+                    'name' => $karyawanName,
+                    'nik' => $activity->nik_karyawan ?? '-',
+                    'departemen' => $activity->nama_departemen ?? '-',
+                ];
+            }
+
+            $waktuAwal = $activity->waktu_awal;
+            $waktuAkhir = $activity->waktu_akhir;
+
+            if ($waktuAwal && $waktuAkhir) {
+                $startParts = explode(':', $waktuAwal);
+                $endParts = explode(':', $waktuAkhir);
+
+                if (count($startParts) >= 2 && count($endParts) >= 2) {
+                    $startMinutes = (int)$startParts[0] * 60 + (int)$startParts[1];
+                    $endMinutes = (int)$endParts[0] * 60 + (int)$endParts[1];
+
+                    $startFrom0 = $startMinutes;
+                    $endFrom0 = $endMinutes;
+
+                    if ($endFrom0 > $startFrom0) {
+                        if (!isset($timelineData[$userId])) {
+                            $timelineData[$userId] = [];
+                        }
+
+                        $timelineData[$userId][] = [
+                            'x' => $karyawanName,
+                            'y' => [$startFrom0, $endFrom0],
+                            'aktivitas' => $activity->aktivitas,
+                            'tanggal' => $activity->tanggal,
+                            'waktu_awal' => $waktuAwal,
+                            'waktu_akhir' => $waktuAkhir,
+                            'activity_id' => $activity->activity_id,
+                        ];
+                    }
+                }
+            }
         }
 
+        $timelineSeries = [];
+        foreach ($karyawanList as $karyawan) {
+            $userId = $karyawan['id'];
+            if (isset($timelineData[$userId]) && count($timelineData[$userId]) > 0) {
+                $timelineSeries = array_merge($timelineSeries, $timelineData[$userId]);
+            }
+        }
+
+        // Create hour labels for x-axis (8:00 to 17:00 in minutes from 8:00)
+        $hourLabels = [];
         for ($hour = 8; $hour <= 17; $hour++) {
             $hourLabels[] = $hour . ':00';
-            $hourCounts[] = isset($hourMap[$hour]) ? $hourMap[$hour] : 0;
         }
+
+        // Get unique karyawan names for y-axis
+        $karyawanNames = array_column($karyawanList, 'name');
 
         return view('home', compact(
             'statusLabels',
@@ -145,7 +232,11 @@ class HomeController extends Controller
             'karyawanNames',
             'karyawanCounts',
             'hourLabels',
-            'hourCounts'
+            'timelineSeries',
+            'karyawanList',
+            'deptNamesDetail',
+            'deptTotalDetail',
+            'deptIdsDetail'
         ));
     }
 }

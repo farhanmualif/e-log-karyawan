@@ -7,17 +7,33 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\User;
+use Illuminate\Support\Facades\Log;
 
 class KaryawanController extends Controller
 {
     public function index(Request $request)
     {
         $perPage = 10;
-        $listKaryawan = DB::connection('mysql_khanza')
+        $search = $request->get('search', '');
+        $filterDepartemen = $request->get('filter_departemen', '');
+
+        $query = DB::connection('mysql_khanza')
             ->table('pegawai')
             ->join('departemen', 'pegawai.departemen', '=', 'departemen.dep_id')
-            ->select(['nik as id', 'pegawai.nama', 'jk', 'bidang', 'departemen.nama as departemen', 'stts_kerja', 'mulai_kerja'])
-            ->paginate($perPage);
+            ->select(['nik as id', 'pegawai.nama', 'jk', 'bidang', 'departemen.nama as departemen', 'stts_kerja', 'mulai_kerja']);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('pegawai.nama', 'like', '%' . $search . '%')
+                    ->orWhere('pegawai.nik', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($filterDepartemen && $filterDepartemen !== 'Semua Departemen') {
+            $query->where('departemen.nama', $filterDepartemen);
+        }
+
+        $listKaryawan = $query->paginate($perPage)->appends($request->query());
 
         $registeredNiks = DB::table('users')
             ->whereNotNull('username')
@@ -71,6 +87,12 @@ class KaryawanController extends Controller
 
             $processedItem = [];
             foreach ($data as $key => $value) {
+
+                if (in_array($key, ['id', 'nik'])) {
+                    $processedItem[$key] = $value;
+                    continue;
+                }
+
                 $processedItem[$key] = is_string($value)
                     ? ucwords(strtolower($value))
                     : $value;

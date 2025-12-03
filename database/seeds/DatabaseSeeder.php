@@ -26,5 +26,10 @@ class DatabaseSeeder extends Seeder
         $adminSeeder = new AdminSeeder();
         $adminSeeder->setCommand($this->command);
         $adminSeeder->run();
+
+        // require_once __DIR__ . '/LogAktivitasSeeder.php';
+        // $logSeeder = new LogAktivitasSeeder();
+        // $logSeeder->setCommand($this->command);
+        // $logSeeder->run();
     }
 }

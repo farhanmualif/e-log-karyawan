@@ -55,15 +55,15 @@
                     </div>
                 </div>
 
-                <!-- Footer -->
-                <div class="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-                    <button type="button" onclick="closeChangePasswordModal()" class="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm font-medium">
-                        Batal
-                    </button>
+            <!-- Footer -->
+            <div class="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                <button type="button" onclick="closeChangePasswordModal()" class="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm font-medium">
+                    Batal
+                </button>
                     <button type="submit" class="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-xs sm:text-sm font-medium">
-                        Simpan
-                    </button>
-                </div>
+                    Simpan
+                </button>
+            </div>
             </form>
         </div>
     </div>

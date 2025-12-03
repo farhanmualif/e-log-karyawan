@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class LogAktivitasController extends Controller
 {
-
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -51,7 +51,6 @@ class LogAktivitasController extends Controller
             }
         }
         // SDM (superadmin): melihat semua log, tidak perlu filter
-
         // Filter berdasarkan tanggal
         if ($request->filled('tanggal_dari')) {
             $query->where('log_aktivitas.tanggal', '>=', $request->tanggal_dari);
@@ -291,23 +290,33 @@ class LogAktivitasController extends Controller
      */
     public function show(Request $request)
     {
-        $tanggal = $request->get('tanggal');
-        $user_id = $request->get('user_id');
+        $tanggal = $request->input('tanggal');
+        $userId  = $request->input('user_id');
 
-        if (!$tanggal || !$user_id) {
-            abort(404);
+        if (!$tanggal || !$userId) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Terjadi Kesalahan pada parameter tanggal dan user'
+                ]);
+            }
+            return redirect()->back()->with('error', 'Terjadi Kesalahan pada parameter tanggal dan user');
         }
 
-        // Ambil info karyawan
         $karyawan = DB::table('users')
-            ->where('id', $user_id)
+            ->where('id', $userId)
             ->first();
 
         if (!$karyawan) {
-            abort(404);
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Karyawan tidak ditemukan'
+                ]);
+            }
+            return redirect()->back()->with('error', 'Karyawan tidak ditemukan');
         }
 
-        // Ambil semua log untuk tanggal dan user tersebut
         $logs = DB::table('log_aktivitas')
             ->leftJoin('users as validator', 'log_aktivitas.validated_by', '=', 'validator.id')
             ->leftJoin('tb_departemen', 'log_aktivitas.departemen_id', '=', 'tb_departemen.id')
@@ -319,71 +328,118 @@ class LogAktivitasController extends Controller
                 'tb_unit.nama as nama_unit'
             )
             ->where('log_aktivitas.tanggal', $tanggal)
-            ->where('log_aktivitas.user_id', $user_id)
+            ->where('log_aktivitas.user_id', $userId)
             ->orderBy('log_aktivitas.waktu_awal', 'asc')
             ->get();
 
-        // Cek akses berdasarkan hierarki (menggunakan unit_id dan departemen_id dari log_aktivitas)
         $user = Auth::user();
-        $hasAccess = false;
 
-        // Ambil unit_id dan departemen_id dari log pertama (semua log dalam satu hari seharusnya sama)
-        $firstLog = $logs->first();
-        $logUnitId = $firstLog ? $firstLog->unit_id : null;
-        $logDepartemenId = $firstLog ? $firstLog->departemen_id : null;
+        $firstLog        = $logs->first();
+        $logUnitId       = $firstLog->unit_id        ?? null;
+        $logDepartemenId = $firstLog->departemen_id  ?? null;
+
+        //  1. PERMISSION: BOLEH LIHAT HALAMAN?
+        $canView = false;
 
         if ($user->role === 'karyawan') {
-            // Karyawan: hanya bisa lihat log sendiri
-            $hasAccess = ($user_id == $user->id);
+            // Karyawan: hanya log miliknya sendiri
+            $canView = ($userId == $user->id);
         } elseif ($user->role === 'spv') {
-            // SPV: bisa lihat log semua karyawan di unitnya (berdasarkan unit_id di log_aktivitas)
-            if ($user->unit_id && $logUnitId) {
-                $hasAccess = ($user->unit_id == $logUnitId);
-            } else {
-                $hasAccess = ($user_id == $user->id);
-            }
+            // SPV: boleh lihat log sendiri ATAU karyawan satu unit
+            $canView =
+                ($userId == $user->id) ||
+                ($user->unit_id && $logUnitId && $user->unit_id == $logUnitId);
         } elseif ($user->role === 'manager') {
-            // Manager: bisa lihat log semua unit dalam departemennya (berdasarkan departemen_id di log_aktivitas)
-            if ($user->departemen_id && $logDepartemenId) {
-                $hasAccess = ($user->departemen_id == $logDepartemenId);
-            } else {
-                $hasAccess = ($user_id == $user->id);
-            }
+            // Manager: boleh lihat log sendiri ATAU semua unit di departemennya
+            $canView =
+                ($userId == $user->id) ||
+                ($user->departemen_id && $logDepartemenId && $user->departemen_id == $logDepartemenId);
         } elseif (in_array($user->role, ['sdm', 'superadmin', 'admin'])) {
-            // SDM/Superadmin/Admin: bisa lihat semua log
-            $hasAccess = true;
+            // Role global: boleh lihat semua
+            $canView = true;
         }
 
-        if (!$hasAccess) {
-            abort(403);
+        if (!$canView) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Akses ditolak'
+                ]);
+            }
+            return redirect()->back()->with('error', 'Akses ditolak');
         }
 
-        // Tentukan status (jika ada yang menunggu, status = menunggu)
+        // 2. RINGKASAN STATUS HARI ITU
         $status = 'tervalidasi';
         foreach ($logs as $log) {
-            if ($log->status == 'menunggu') {
+            if ($log->status === 'menunggu') {
                 $status = 'menunggu';
                 break;
-            } elseif ($log->status == 'ditolak') {
+            } elseif ($log->status === 'ditolak') {
                 $status = 'ditolak';
             }
         }
 
-        // Ambil nama departemen dan unit dari log pertama
-        $firstLog = $logs->first();
-        $departemenNama = $firstLog ? ($firstLog->nama_departemen ?? 'Belum Ditentukan') : 'Belum Ditentukan';
-        $unitNama = $firstLog ? ($firstLog->nama_unit ?? 'Belum Ditentukan') : 'Belum Ditentukan';
+        // 3. PERMISSION: BOLEH EDIT / BULK ?
+        $canEdit       = false;
+        $canBulkAction = false;
+
+        $isOwner = ($user->id == $userId);
+
+        if ($status === 'menunggu' && $logs->isNotEmpty()) {
+            foreach ($logs as $log) {
+
+                if ($log->status !== 'menunggu') continue;
+
+                if ($isOwner) {
+                    $canEdit = true;
+                    continue;
+                }
+
+                if (in_array($user->role, ['admin', 'sdm', 'superadmin'])) {
+                    $canEdit       = true;
+                    $canBulkAction = true;
+                    break;
+                }
+
+                if ($user->role === 'spv') {
+                    $isAtasan = in_array($karyawan->role, ['spv', 'manager']);
+                    if (!$isAtasan && $user->unit_id == $logUnitId) {
+                        $canEdit       = true;
+                        $canBulkAction = true;
+                    }
+                    break;
+                }
+
+                if ($user->role === 'manager') {
+                    $isAtasan = ($karyawan->role === 'manager' && $karyawan->id !== $user->id);
+
+                    if (!$isAtasan && $user->departemen_id == $logDepartemenId) {
+                        $canEdit       = true;
+                        $canBulkAction = true;
+                    }
+                    break;
+                }
+            }
+        }
+
+        $departemenNama = $firstLog->nama_departemen ?? 'Belum Ditentukan';
+        $unitNama       = $firstLog->nama_unit       ?? 'Belum Ditentukan';
 
         return view('log-aktivitas.show', [
-            'logs' => $logs,
-            'karyawan' => $karyawan,
-            'tanggal' => $tanggal,
-            'status' => $status,
+            'logs'            => $logs,
+            'karyawan'        => $karyawan,
+            'tanggal'         => $tanggal,
+            'status'          => $status,
             'departemen_nama' => $departemenNama,
-            'unit_nama' => $unitNama,
-            'karyawan_role' => $karyawan->role ?? 'karyawan'
+            'unit_nama'       => $unitNama,
+            'karyawan_role'   => $karyawan->role ?? 'karyawan',
+            'karyawan_id'     => $karyawan->id,
+            'canEdit'         => $canEdit,
+            'canBulkAction'   => $canBulkAction,
         ]);
     }
+
 
     /**
      * Validasi log aktivitas (Approve)
@@ -509,8 +565,8 @@ class LogAktivitasController extends Controller
         ]);
 
         $user = Auth::user();
-        if (!in_array($user->role, ['spv', 'manager', 'sdm', 'superadmin'])) {
-            abort(403);
+        if (!in_array($user->role, ['spv', 'manager', 'sdm', 'superadmin', 'admin'])) {
+            return back()->with('error', 'Role anda tidak memiliki izin untuk melakukan bulk');
         }
 
         $updated = 0;
@@ -573,65 +629,93 @@ class LogAktivitasController extends Controller
 
     public function bulkReject(Request $request)
     {
-        $request->validate([
-            'selected_items' => 'required|array|min:1',
-            'selected_items.*' => 'required|string',
-            'catatan_validasi' => 'required|string|min:5',
-        ]);
+        try {
+            $request->validate([
+                'selected_items' => 'required|array|min:1',
+                'selected_items.*' => 'required|string',
+                'catatan_validasi' => 'required|string|min:5',
+            ]);
 
-        $user = Auth::user();
-        if (!in_array($user->role, ['spv', 'manager', 'sdm', 'superadmin'])) {
-            abort(403);
-        }
-
-        $updated = 0;
-        foreach ($request->selected_items as $item) {
-            list($tanggal, $user_id) = explode('_', $item);
-
-            // Cek akses berdasarkan hierarki dan role
-            $karyawan = DB::table('users')->where('id', $user_id)->first();
-            $karyawanRole = $karyawan->role ?? 'karyawan';
-            $hasAccess = false;
-
-            if ($user->role === 'spv') {
-                // SPV: bisa tolak log di unitnya, TIDAK bisa tolak manager
-                if ($karyawanRole === 'manager') {
-                    $hasAccess = false;
-                } elseif ($user->unit_id && $karyawan->unit_id) {
-                    $hasAccess = ($user->unit_id == $karyawan->unit_id);
-                }
-            } elseif ($user->role === 'manager') {
-                // Manager: bisa tolak log di departemennya (karyawan dan SPV)
-                if ($user->departemen_id && $karyawan->unit_id) {
-                    $unit = DB::table('tb_unit')
-                        ->where('id', $karyawan->unit_id)
-                        ->where('departemen_id', $user->departemen_id)
-                        ->first();
-                    $hasAccess = ($unit !== null);
-                }
-            } elseif (in_array($user->role, ['sdm', 'superadmin', 'admin'])) {
-                $hasAccess = true;
-            }
-
-            if ($hasAccess) {
-                $result = DB::table('log_aktivitas')
-                    ->where('tanggal', $tanggal)
-                    ->where('user_id', $user_id)
-                    ->where('status', 'menunggu')
-                    ->update([
-                        'status' => 'ditolak',
-                        'validated_by' => $user->id,
-                        'validated_at' => now(),
-                        'catatan_validasi' => $request->catatan_validasi,
-                        'updated_at' => now(),
+            $user = Auth::user();
+            if (!$user) {
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'User tidak terauthentikasi'
                     ]);
+                }
 
-                $updated += $result;
+                return redirect()->back()->with('error', 'Anda tidak memiliki izin akses untuk melakukan ini');
             }
-        }
 
-        return redirect()->route('log-aktivitas.index')
-            ->with('success', $updated . ' log aktivitas ditolak.');
+            if (!in_array($user->role, ['spv', 'manager', 'sdm', 'superadmin', 'admin'])) {
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'User tidak terauthentikasi'
+                    ]);
+                }
+
+                return redirect()->back()->with('error', 'Anda tidak memiliki izin akses untuk melakukan ini');
+            }
+
+            $updated = 0;
+            foreach ($request->selected_items as $item) {
+                list($tanggal, $user_id) = explode('_', $item);
+
+                // Cek akses berdasarkan hierarki dan role
+                $karyawan = DB::table('users')->where('id', $user_id)->first();
+                $karyawanRole = $karyawan->role ?? 'karyawan';
+                $hasAccess = false;
+
+                if ($user->role === 'spv') {
+                    // SPV: bisa tolak log di unitnya, TIDAK bisa tolak manager
+                    if ($karyawanRole === 'manager') {
+                        $hasAccess = false;
+                    } elseif ($user->unit_id && $karyawan->unit_id) {
+                        $hasAccess = ($user->unit_id == $karyawan->unit_id);
+                    }
+                } elseif ($user->role === 'manager') {
+                    // Manager: bisa tolak log di departemennya (karyawan dan SPV)
+                    if ($user->departemen_id && $karyawan->unit_id) {
+                        $unit = DB::table('tb_unit')
+                            ->where('id', $karyawan->unit_id)
+                            ->where('departemen_id', $user->departemen_id)
+                            ->first();
+                        $hasAccess = ($unit !== null);
+                    }
+                } elseif (in_array($user->role, ['sdm', 'superadmin', 'admin'])) {
+                    $hasAccess = true;
+                }
+
+                if ($hasAccess) {
+                    $result = DB::table('log_aktivitas')
+                        ->where('tanggal', $tanggal)
+                        ->where('user_id', $user_id)
+                        ->where('status', 'menunggu')
+                        ->update([
+                            'status' => 'ditolak',
+                            'validated_by' => $user->id,
+                            'validated_at' => now(),
+                            'catatan_validasi' => $request->catatan_validasi,
+                            'updated_at' => now(),
+                        ]);
+
+                    $updated += $result;
+                }
+            }
+
+            return redirect()->route('log-aktivitas.index')
+                ->with('success', $updated . ' log aktivitas ditolak.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Bulk reject error: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -645,8 +729,15 @@ class LogAktivitasController extends Controller
         ]);
 
         $user = Auth::user();
-        if (!in_array($user->role, ['spv', 'manager', 'sdm', 'superadmin'])) {
-            abort(403);
+        if (!in_array($user->role, ['spv', 'manager', 'sdm', 'superadmin', 'admin'])) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Anda tidak memiliki izin akses untuk melakukan aksi ini'
+                ]);
+            }
+
+            return redirect()->back()->with('error', 'Anda tidak memiliki izin akses untuk melakukan ini');
         }
 
         // Filter log berdasarkan akses hierarki
@@ -718,8 +809,12 @@ class LogAktivitasController extends Controller
         ]);
 
         $user = Auth::user();
-        if (!in_array($user->role, ['spv', 'manager', 'sdm', 'superadmin'])) {
-            abort(403);
+        if (!$user) {
+            abort(403, 'User tidak terautentikasi');
+        }
+
+        if (!in_array($user->role, ['spv', 'manager', 'sdm', 'superadmin', 'admin'])) {
+            abort(403, 'Anda tidak memiliki izin akses untuk melakukan aksi ini');
         }
 
         // Filter log berdasarkan akses hierarki
@@ -886,5 +981,269 @@ class LogAktivitasController extends Controller
 
         return redirect()->route('log-aktivitas.index')
             ->with('success', 'Log aktivitas berhasil dihapus.');
+    }
+
+    public function detailActivity(Request $request, $user_id)
+    {
+        try {
+            // Get user information
+            $user = DB::table('users')
+                ->leftJoin('tb_departemen', 'users.departemen_id', '=', 'tb_departemen.id')
+                ->leftJoin('tb_unit', 'users.unit_id', '=', 'tb_unit.id')
+                ->where('users.id', $user_id)
+                ->select(
+                    'users.id',
+                    'users.name',
+                    'users.username as nik',
+                    'tb_departemen.nama as nama_departemen',
+                    'tb_unit.nama as nama_unit'
+                )
+                ->first();
+
+            if (!$user) {
+                return redirect()->back()->with('error', 'Karyawan tidak ditemukan.');
+            }
+
+            // Get all activities for this user
+            $activities = DB::table('log_aktivitas')
+                ->leftJoin('tb_departemen', 'log_aktivitas.departemen_id', '=', 'tb_departemen.id')
+                ->leftJoin('tb_unit', 'log_aktivitas.unit_id', '=', 'tb_unit.id')
+                ->leftJoin('users as validator', 'log_aktivitas.validated_by', '=', 'validator.id')
+                ->where('log_aktivitas.user_id', $user_id)
+                ->select(
+                    'log_aktivitas.*',
+                    'tb_departemen.nama as nama_departemen',
+                    'tb_unit.nama as nama_unit',
+                    'validator.name as nama_validator'
+                )
+                ->orderBy('log_aktivitas.tanggal', 'desc')
+                ->orderBy('log_aktivitas.waktu_awal', 'asc')
+                ->get();
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Berhasil mengambil data detail activity',
+                    'data' => $activities
+                ]);
+            }
+
+            return view('log-aktivitas.detail-activity', compact('user', 'activities'));
+        } catch (\Throwable $th) {
+            return redirect()->back()->with('error', 'Gagal mengambil data detail activity: ' . $th->getMessage());
+        }
+    }
+
+    public function detailActivityByDepId(Request $request, $departemen_id)
+    {
+        try {
+
+            $departemen = DB::table('tb_departemen')
+                ->where('id', $departemen_id)
+                ->whereNull('deleted_at')
+                ->select('id', 'nama')
+                ->first();
+
+            if (!$departemen) {
+                return redirect()->back()->with('error', 'Departemen tidak ditemukan.');
+            }
+
+            $activities = DB::table('log_aktivitas')
+                ->leftJoin('tb_departemen', 'log_aktivitas.departemen_id', '=', 'tb_departemen.id')
+                ->leftJoin('tb_unit', 'log_aktivitas.unit_id', '=', 'tb_unit.id')
+                ->leftJoin('users', 'log_aktivitas.user_id', '=', 'users.id')
+                ->leftJoin('users as validator', 'log_aktivitas.validated_by', '=', 'validator.id')
+                ->where('log_aktivitas.departemen_id', $departemen_id)
+                ->whereNull('tb_departemen.deleted_at')
+                ->select(
+                    'log_aktivitas.*',
+                    'tb_departemen.nama as nama_departemen',
+                    'tb_unit.nama as nama_unit',
+                    'users.name as nama_karyawan',
+                    'users.username as nik_karyawan',
+                    'validator.name as nama_validator'
+                )
+                ->orderBy('log_aktivitas.tanggal', 'desc')
+                ->orderBy('log_aktivitas.waktu_awal', 'asc')
+                ->get();
+
+            $totalActivities = $activities->count();
+            $totalKaryawan = $activities->pluck('user_id')->unique()->count();
+            $statusCounts = $activities->groupBy('status')->map->count();
+
+
+            $groupedActivities = $activities->groupBy('user_id')->map(function ($karyawanActivities, $userId) use ($request) {
+                $karyawan = $karyawanActivities->first();
+                $totalAktivitas = $karyawanActivities->count();
+                $statusCounts = $karyawanActivities->groupBy('status')->map->count();
+
+                $activityPerPage = $request->get('activity_per_page', 5);
+                $activityPage = $request->get("activity_page_{$userId}", 1);
+
+                $activityItems = $karyawanActivities->values()->all();
+                $activityTotal = count($activityItems);
+                $activityOffset = ($activityPage - 1) * $activityPerPage;
+                $activityItemsForPage = array_slice($activityItems, $activityOffset, $activityPerPage);
+
+                $queryParams = $request->query();
+                $queryParams["activity_page_{$userId}"] = $activityPage;
+
+                $paginatedActivities = new LengthAwarePaginator(
+                    collect($activityItemsForPage),
+                    $activityTotal,
+                    $activityPerPage,
+                    $activityPage,
+                    [
+                        'path' => $request->url(),
+                        'query' => $queryParams,
+                        'pageName' => "activity_page_{$userId}",
+                    ]
+                );
+
+                return [
+                    'karyawan' => $karyawan,
+                    'activities' => $paginatedActivities,
+                    'activities_all' => $karyawanActivities,
+                    'total_aktivitas' => $totalAktivitas,
+                    'status_counts' => $statusCounts
+                ];
+            });
+
+            $perPage = $request->get('per_page', 10);
+            $currentPage = $request->get('page', 1);
+            $items = $groupedActivities->values();
+            $total = $items->count();
+            $offset = ($currentPage - 1) * $perPage;
+            $itemsForCurrentPage = $items->slice($offset, $perPage)->values();
+
+            $paginatedGroupedActivities = new LengthAwarePaginator(
+                $itemsForCurrentPage,
+                $total,
+                $perPage,
+                $currentPage,
+                [
+                    'path' => $request->url(),
+                    'query' => $request->query(),
+                ]
+            );
+
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Berhasil mengambil data detail activity',
+                    'data' => $activities,
+                    'grouped_data' => $groupedActivities,
+                    'statistics' => [
+                        'total_activities' => $totalActivities,
+                        'total_karyawan' => $totalKaryawan,
+                        'status_counts' => $statusCounts
+                    ]
+                ]);
+            }
+
+            return view('log-aktivitas.detail-activity-by-departemen', compact('departemen', 'activities', 'totalActivities', 'totalKaryawan', 'statusCounts', 'paginatedGroupedActivities', 'departemen_id'));
+        } catch (\Throwable $th) {
+            return redirect()->back()->with('error', 'Gagal mengambil data detail activity: ' . $th->getMessage());
+        }
+    }
+
+
+    public function getActivitiesByUser(Request $request, $departemen_id, $user_id)
+    {
+        try {
+            $activities = DB::table('log_aktivitas')
+                ->leftJoin('tb_departemen', 'log_aktivitas.departemen_id', '=', 'tb_departemen.id')
+                ->leftJoin('tb_unit', 'log_aktivitas.unit_id', '=', 'tb_unit.id')
+                ->leftJoin('users', 'log_aktivitas.user_id', '=', 'users.id')
+                ->leftJoin('users as validator', 'log_aktivitas.validated_by', '=', 'validator.id')
+                ->where('log_aktivitas.departemen_id', $departemen_id)
+                ->where('log_aktivitas.user_id', $user_id)
+                ->whereNull('tb_departemen.deleted_at')
+                ->select(
+                    'log_aktivitas.*',
+                    'tb_departemen.nama as nama_departemen',
+                    'tb_unit.nama as nama_unit',
+                    'users.name as nama_karyawan',
+                    'users.username as nik_karyawan',
+                    'validator.name as nama_validator'
+                )
+                ->orderBy('log_aktivitas.tanggal', 'desc')
+                ->orderBy('log_aktivitas.waktu_awal', 'asc')
+                ->get();
+
+            $activityPerPage = $request->get('activity_per_page', 5);
+            $activityPage = $request->get("activity_page_{$user_id}", 1);
+
+            $activityItems = $activities->values()->all();
+            $activityTotal = count($activityItems);
+            $activityOffset = ($activityPage - 1) * $activityPerPage;
+            $activityItemsForPage = array_slice($activityItems, $activityOffset, $activityPerPage);
+
+            $queryParams = $request->query();
+            $queryParams["activity_page_{$user_id}"] = $activityPage;
+
+            $paginatedActivities = new LengthAwarePaginator(
+                collect($activityItemsForPage),
+                $activityTotal,
+                $activityPerPage,
+                $activityPage,
+                [
+                    'path' => $request->url(),
+                    'query' => $queryParams,
+                    'pageName' => "activity_page_{$user_id}",
+                ]
+            );
+
+            $paginationLinks = $this->buildPaginationLinks($paginatedActivities, "activity_page_{$user_id}");
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'data'          => $paginatedActivities->items(),
+                    'current_page'  => $paginatedActivities->currentPage(),
+                    'last_page'     => $paginatedActivities->lastPage(),
+                    'from'          => $paginatedActivities->firstItem(),
+                    'to'            => $paginatedActivities->lastItem(),
+                    'total'         => $paginatedActivities->total(),
+                    'links'         => $paginationLinks,
+                ]
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengambil data activities: ' . $th->getMessage()
+            ], 500);
+        }
+    }
+
+    private function buildPaginationLinks(LengthAwarePaginator $paginator, string $pageName)
+    {
+        $links = [];
+
+        // Previous Page
+        $links[] = [
+            'url' => $paginator->previousPageUrl(),
+            'label' => '&laquo; Sebelumnya',
+            'active' => false,
+        ];
+
+        // Numbered Pages
+        for ($i = 1; $i <= $paginator->lastPage(); $i++) {
+            $links[] = [
+                'url' => $paginator->url($i),
+                'label' => (string) $i,
+                'active' => $i === $paginator->currentPage(),
+            ];
+        }
+
+        // Next Page
+        $links[] = [
+            'url' => $paginator->nextPageUrl(),
+            'label' => 'Berikutnya &raquo;',
+            'active' => false,
+        ];
+
+        return $links;
     }
 }

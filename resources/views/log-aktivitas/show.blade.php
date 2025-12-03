@@ -4,18 +4,25 @@
 @php
 $currentUser = Auth::user();
 $karyawanRole = $karyawan_role ?? 'karyawan';
+$karyawanId = $karyawan_id;
 
-$canPerformAction = function() use ($currentUser, $karyawanRole) {
+$canPerformAction = function() use ($currentUser, $karyawanRole, $karyawanId) {
 if (in_array($currentUser->role, ['admin', 'sdm', 'superadmin'])) {
 return true;
 }
 if ($currentUser->role === 'spv' && $karyawanRole === 'manager') {
 return false;
 }
-if ($currentUser->role === 'manager' && in_array($karyawanRole, ['karyawan', 'spv'])) {
+if ($currentUser->role === 'manager' && in_array($karyawanRole, ['karyawan', 'spv','manager'])) {
 return true;
 }
 if ($currentUser->role === 'spv' && $karyawanRole === 'karyawan') {
+return true;
+}
+if (($currentUser->role === 'spv' && $karyawanRole === 'spv') && $currentUser->id == $karyawanId) {
+return true;
+}
+if (($currentUser->role === 'manager' && $karyawanRole === 'manager') && $currentUser->id == $karyawanId) {
 return true;
 }
 return false;
@@ -161,17 +168,16 @@ $hasActionPermission = $canPerformAction();
                     </span>
                     @endif
 
-                    @if($log->status == 'menunggu' && ((Auth::user()->role === 'karyawan' && $log->user_id == Auth::id()) || ($hasActionPermission && $log->user_id != Auth::id())))
-                    <button type="button" onclick="openEditModal('{{ $log->id }}')" class="text-blue-600 hover:text-blue-900 transition-colors" title="Edit">
+                    @if($log->status == 'menunggu' && $canEdit)
+                    <button type="button" onclick="openEditModal('{{ $log->id }}')" class="text-blue-600 hover:text-blue-900" title="Edit">
                         <i data-lucide="pencil" class="w-4 h-4"></i>
                     </button>
-
-
                     @else
                     <button type="button" disabled class="text-gray-400 cursor-not-allowed" title="Tidak dapat diedit">
                         <i data-lucide="pencil" class="w-4 h-4"></i>
                     </button>
                     @endif
+
 
                     @if (Auth::id() == $log->user_id && $log->status == 'menunggu')
                     <form method="post" action="{{ route('log-aktivitas.destroy', $log->id) }}" onsubmit="alert('apakah anda yakin menghapus catatan ini?')">
@@ -225,7 +231,7 @@ $hasActionPermission = $canPerformAction();
         Tolak Semua
     </button>
     @endif
-    <a href="{{ route('log-aktivitas.index') }}" class="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+    <a href="{{ route('log-aktivitas.index') }}" class="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium focus:no-underline">
         Kembali
     </a>
 </div>

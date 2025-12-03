@@ -36,27 +36,8 @@
 
     <!-- Icon -->
     <!-- <link rel="icon" href="path/to/your/favicon.ico" type="image/x-icon"> -->
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+    <link rel="stylesheet" href="{{ asset('css/app.blade.css') }}">
 
-        @keyframes slide-in-right {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .animate-slide-in-right {
-            animation: slide-in-right 0.3s ease-out;
-        }
-    </style>
 </head>
 
 <body class="bg-white">
@@ -72,7 +53,8 @@
     @endguest
 
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
+    <script src="{{ asset('js/scripts/app.js') }}"></script>
+    <!-- <script>
         function toggleListSection() {
             const $listSection = $('#listSection');
             const $chevron = $('#listChevron');
@@ -168,7 +150,7 @@
             });
 
         });
-    </script>
+    </script> -->
 
     <!-- Apexchart Cdn -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
