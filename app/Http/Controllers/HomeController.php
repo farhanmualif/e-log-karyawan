@@ -185,7 +185,7 @@ class HomeController extends Controller
                 if (count($startParts) >= 2 && count($endParts) >= 2) {
                     $startMinutes = (int)$startParts[0] * 60 + (int)$startParts[1];
                     $endMinutes = (int)$endParts[0] * 60 + (int)$endParts[1];
-
+                    
                     $startFrom0 = $startMinutes;
                     $endFrom0 = $endMinutes;
 
